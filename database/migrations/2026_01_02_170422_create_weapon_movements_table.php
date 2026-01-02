@@ -4,22 +4,29 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('weapon_movements', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('weapon_id')->constrained('weapons')->cascadeOnDelete();
+            $table->enum('type', ['IN', 'OUT']);
+            $table->unsignedInteger('quantity');
+
+            $table->decimal('unit_cost', 12, 2)->nullable(); // útil para ingresos
+            $table->string('reference')->nullable();
+            $table->text('notes')->nullable();
+
+            $table->dateTime('moved_at')->nullable();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+
             $table->timestamps();
+
+            $table->index(['weapon_id', 'type']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('weapon_movements');
