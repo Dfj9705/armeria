@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\WeaponResource\Pages\CreateWeapon;
 use App\Filament\Resources\WeaponResource\Pages\EditWeapon;
 use App\Filament\Resources\WeaponResource\Pages\ListWeapons;
+use App\Filament\Resources\WeaponResource\RelationManagers\MovementsRelationManager;
 use App\Models\BrandModel;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
@@ -147,6 +148,13 @@ class WeaponResource extends Resource
             'index' => ListWeapons::route('/'),
             'create' => CreateWeapon::route('/create'),
             'edit' => EditWeapon::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            MovementsRelationManager::class,
         ];
     }
 
