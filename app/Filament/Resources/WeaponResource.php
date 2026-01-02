@@ -6,9 +6,11 @@ use App\Filament\Resources\WeaponResource\Pages\CreateWeapon;
 use App\Filament\Resources\WeaponResource\Pages\EditWeapon;
 use App\Filament\Resources\WeaponResource\Pages\ListWeapons;
 use App\Filament\Resources\WeaponResource\RelationManagers\MovementsRelationManager;
+use App\Filament\Resources\WeaponResource\RelationManagers\UnitsRelationManager;
 use App\Models\BrandModel;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -41,13 +43,6 @@ class WeaponResource extends Resource
     {
         return $form->schema([
             Section::make('Datos del arma')->schema([
-                TextInput::make('serial_number')
-                    ->label('No. Serie')
-                    ->maxLength(100)->required()
-                    ->unique(ignoreRecord: true),
-
-
-
                 Select::make('brand_id')
                     ->label('Marca')
                     ->relationship('brand', 'name')
@@ -101,7 +96,6 @@ class WeaponResource extends Resource
                     ->options([
                         'ACTIVE' => 'Activa',
                         'INACTIVE' => 'Baja',
-                        'MAINTENANCE' => 'Mantenimiento',
                     ])->default('ACTIVE')->required(),
 
                 Textarea::make('description')->label('Descripción')->columnSpanFull(),
@@ -138,7 +132,6 @@ class WeaponResource extends Resource
             ])
             ->actions([
                 EditAction::make(),
-                DeleteAction::make(),
             ]);
     }
 
@@ -154,7 +147,8 @@ class WeaponResource extends Resource
     public static function getRelations(): array
     {
         return [
-            MovementsRelationManager::class,
+                // MovementsRelationManager::class,
+            UnitsRelationManager::class
         ];
     }
 

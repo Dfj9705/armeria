@@ -80,13 +80,16 @@ class MovementsRelationManager extends RelationManager
                         $data['user_id'] = Auth::id();
                         return $data;
                     })
-                    ->before(function (array $data, RelationManager $livewire) {
-                        $weapon = $livewire->ownerRecord; // arma actual
+                    ->before(function (array $data) {
+
+                        $weapon = $this->getOwnerRecord()->fresh();
+                        $stock = $weapon->getStockAttribute();
+                        logger()->info($stock);
                         $qty = (int) ($data['quantity'] ?? 0);
 
-                        if ($qty > $weapon->stock) {
+                        if ($qty > $stock) {
                             throw ValidationException::withMessages([
-                                'quantity' => "No hay stock suficiente. Disponible: {$weapon->stock}",
+                                'quantity' => "No hay stock suficiente. Disponible: {$stock}",
                             ]);
                         }
                     })
@@ -95,7 +98,7 @@ class MovementsRelationManager extends RelationManager
 
                         Forms\Components\Placeholder::make('stock_actual')
                             ->label('Stock actual')
-                            ->content(fn($record) => $record?->stock ?? 0)
+                            ->content(fn() => $this->getOwnerRecord()->fresh()->getStockAttribute() ?? 0)
                             ->extraAttributes(['class' => 'text-lg font-bold']),
 
                         Forms\Components\TextInput::make('quantity')

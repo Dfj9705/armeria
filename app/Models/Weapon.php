@@ -30,12 +30,16 @@ class Weapon extends Model
         return $this->hasMany(WeaponMovement::class);
     }
 
+    public function units()
+    {
+        return $this->hasMany(\App\Models\WeaponUnit::class);
+    }
+
     public function getStockAttribute(): int
     {
-        $in = (int) $this->movements()->where('type', 'IN')->sum('quantity');
-        $out = (int) $this->movements()->where('type', 'OUT')->sum('quantity');
-        return $in - $out;
+        return $this->units()->where('status', 'IN_STOCK')->count();
     }
+
 
     public function brand()
     {
@@ -46,4 +50,17 @@ class Weapon extends Model
     {
         return $this->belongsTo(\App\Models\BrandModel::class, 'brand_model_id');
     }
+
+    public function unitMovements()
+    {
+        return $this->hasManyThrough(
+            WeaponUnitMovement::class,
+            WeaponUnit::class,
+            'weapon_id',        // FK en weapon_units
+            'weapon_unit_id',   // FK en movements
+            'id',
+            'id'
+        );
+    }
+
 }
