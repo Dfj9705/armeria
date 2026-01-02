@@ -35,4 +35,14 @@ class Weapon extends Model
         $out = (int) $this->movements()->where('type', 'OUT')->sum('quantity');
         return $in - $out;
     }
+
+    public function brand()
+    {
+        return $this->belongsTo(\App\Models\Brand::class);
+    }
+
+    public function brandModel()
+    {
+        return $this->belongsTo(\App\Models\BrandModel::class, 'brand_model_id');
+    }
 }

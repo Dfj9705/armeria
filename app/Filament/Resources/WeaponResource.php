@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\WeaponResource\Pages\CreateWeapon;
 use App\Filament\Resources\WeaponResource\Pages\EditWeapon;
 use App\Filament\Resources\WeaponResource\Pages\ListWeapons;
+use App\Models\BrandModel;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
@@ -12,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\DeleteAction;
@@ -42,8 +44,32 @@ class WeaponResource extends Resource
                     ->maxLength(100)->required()
                     ->unique(ignoreRecord: true),
 
-                TextInput::make('brand')->label('Marca')->required()->maxLength(100),
-                TextInput::make('model')->label('Modelo')->required()->maxLength(100),
+                Select::make('brand_id')
+                    ->label('Marca')
+                    ->relationship('brand', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->live()
+                    ->required()
+                    ->afterStateUpdated(fn($set) => $set('brand_model_id', null)),
+                Select::make('brand_model_id')
+                    ->label('Modelo')
+                    ->options(function (Get $get) {
+                        $brandId = $get('brand_id');
+                        if (!$brandId)
+                            return [];
+                        return BrandModel::query()
+                            ->where('brand_id', $brandId)
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->disabled(fn(Get $get) => blank($get('brand_id')))
+                    ->dehydrated(true),
                 TextInput::make('caliber')->label('Calibre')->required()->maxLength(50),
 
                 TextInput::make('magazine_capacity')
@@ -96,8 +122,8 @@ class WeaponResource extends Resource
                     ->circular()
                     ->getStateUsing(fn($record) => $record->images[0] ?? null),
 
-                TextColumn::make('brand')->label('Marca')->searchable()->sortable(),
-                TextColumn::make('model')->label('Modelo')->searchable()->sortable(),
+                TextColumn::make('brand.name')->label('Marca')->sortable()->searchable(),
+                TextColumn::make('brandModel.name')->label('Modelo')->sortable()->searchable(),
                 TextColumn::make('caliber')->label('Calibre')->sortable(),
                 TextColumn::make('price')->label('Precio')->money('GTQ', true),
                 TextColumn::make('stock')->label('Stock')->badge(),
