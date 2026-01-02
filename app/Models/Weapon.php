@@ -9,14 +9,15 @@ class Weapon extends Model
 {
     protected $fillable = [
         'serial_number',
-        'brand',
-        'model',
+        'brand_id',
+        'brand_model_id',
         'caliber',
         'magazine_capacity',
         'barrel_length_mm',
         'price',
         'status',
         'description',
+        'images',
     ];
 
     protected $casts = [

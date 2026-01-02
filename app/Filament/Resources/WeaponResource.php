@@ -14,6 +14,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\DeleteAction;
@@ -44,6 +45,8 @@ class WeaponResource extends Resource
                     ->maxLength(100)->required()
                     ->unique(ignoreRecord: true),
 
+
+
                 Select::make('brand_id')
                     ->label('Marca')
                     ->relationship('brand', 'name')
@@ -51,13 +54,16 @@ class WeaponResource extends Resource
                     ->preload()
                     ->live()
                     ->required()
-                    ->afterStateUpdated(fn($set) => $set('brand_model_id', null)),
+                    ->afterStateUpdated(fn(Set $set) => $set('brand_model_id', null)),
+
                 Select::make('brand_model_id')
                     ->label('Modelo')
+                    ->key(fn(Get $get) => 'brand-model-' . ($get('brand_id') ?? 'none'))
                     ->options(function (Get $get) {
                         $brandId = $get('brand_id');
                         if (!$brandId)
                             return [];
+
                         return BrandModel::query()
                             ->where('brand_id', $brandId)
                             ->where('is_active', true)
@@ -65,11 +71,11 @@ class WeaponResource extends Resource
                             ->pluck('name', 'id')
                             ->toArray();
                     })
-                    ->searchable()
-                    ->preload()
+                    ->live()
                     ->required()
                     ->disabled(fn(Get $get) => blank($get('brand_id')))
-                    ->dehydrated(true),
+                    ->placeholder('Seleccione un modelo'),
+
                 TextInput::make('caliber')->label('Calibre')->required()->maxLength(50),
 
                 TextInput::make('magazine_capacity')
