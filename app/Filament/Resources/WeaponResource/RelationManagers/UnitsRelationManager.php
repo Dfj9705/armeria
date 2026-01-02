@@ -130,6 +130,97 @@ class UnitsRelationManager extends RelationManager
                             ->success()
                             ->send();
                     }),
+                Action::make('egreso_scanner')
+                    ->label('Egreso (scanner)')
+                    ->icon('heroicon-o-arrow-up-on-square')
+                    ->color('danger')
+                    ->modalHeading('Egreso de unidades (seriales)')
+                    ->form([
+                        Forms\Components\Textarea::make('serials')
+                            ->label('Seriales (uno por línea)')
+                            ->rows(10)
+                            ->placeholder("ABC123\nDEF456\nGHI789")
+                            ->required(),
+
+                        Forms\Components\TextInput::make('reference')
+                            ->label('Referencia')
+                            ->required()
+                            ->maxLength(150),
+
+                        Forms\Components\DateTimePicker::make('moved_at')
+                            ->label('Fecha/Hora')
+                            ->default(now())
+                            ->required(),
+
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Notas')
+                            ->rows(3),
+                    ])
+                    ->action(function (array $data): void {
+                        $weapon = $this->getOwnerRecord();
+
+                        // 1) Parsear seriales
+                        $lines = preg_split('/\r\n|\r|\n/', trim($data['serials'] ?? ''));
+                        $serials = collect($lines)
+                            ->map(fn($s) => trim($s))
+                            ->filter()
+                            ->unique()
+                            ->values();
+
+                        if ($serials->isEmpty()) {
+                            Notification::make()
+                                ->title('No se ingresaron seriales válidos.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // 2) Buscar unidades de ESTE arma
+                        $units = $weapon->units()
+                            ->whereIn('serial_number', $serials->all())
+                            ->get()
+                            ->keyBy('serial_number');
+
+                        $errors = [];
+
+                        foreach ($serials as $serial) {
+                            if (!$units->has($serial)) {
+                                $errors[] = "No existe o no pertenece a este arma: {$serial}";
+                            } elseif ($units[$serial]->status !== 'IN_STOCK') {
+                                $errors[] = "No disponible en stock: {$serial}";
+                            }
+                        }
+
+                        if (!empty($errors)) {
+                            Notification::make()
+                                ->title('Errores en el egreso')
+                                ->body(implode("\n", $errors))
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // 3) Procesar egreso
+                        DB::transaction(function () use ($units, $data) {
+                            foreach ($units as $unit) {
+                                $unit->update(['status' => 'OUT']);
+
+                                $unit->movements()->create([
+                                    'type' => 'OUT',
+                                    'reference' => $data['reference'],
+                                    'notes' => $data['notes'] ?? null,
+                                    'moved_at' => $data['moved_at'] ?? now(),
+                                    'user_id' => Auth::id(),
+                                ]);
+                            }
+                        });
+
+                        Notification::make()
+                            ->title('Egreso registrado')
+                            ->body('Unidades egresadas: ' . $units->count())
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
