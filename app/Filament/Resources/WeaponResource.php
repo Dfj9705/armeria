@@ -80,6 +80,12 @@ class WeaponResource extends Resource
                     ->searchable()
                     ->preload()
                     ->required(),
+                Select::make('weapon_type_id')
+                    ->label('Tipo de arma')
+                    ->relationship('type', 'name', fn($query) => $query->where('is_active', true))
+                    ->searchable()
+                    ->preload()
+                    ->required(),
 
                 TextInput::make('magazine_capacity')
                     ->label('Capacidad del cargador')
@@ -133,6 +139,7 @@ class WeaponResource extends Resource
                 TextColumn::make('brand.name')->label('Marca')->sortable()->searchable(),
                 TextColumn::make('brandModel.name')->label('Modelo')->sortable()->searchable(),
                 TextColumn::make('caliber.name')->label('Calibre')->sortable(),
+                TextColumn::make('type.name')->label('Tipo de arma')->sortable(),
                 TextColumn::make('price')->label('Precio')->money('GTQ', true),
                 TextColumn::make('stock')->label('Stock')->badge(),
                 TextColumn::make('status')->label('Estado')->badge(),

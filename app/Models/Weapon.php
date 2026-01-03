@@ -11,7 +11,8 @@ class Weapon extends Model
         'serial_number',
         'brand_id',
         'brand_model_id',
-        'caliber',
+        'caliber_id',
+        'weapon_type_id',
         'magazine_capacity',
         'barrel_length_mm',
         'price',
@@ -67,5 +68,10 @@ class Weapon extends Model
     {
         return $this->belongsTo(Caliber::class, 'caliber_id');
     }
+    public function type()
+    {
+        return $this->belongsTo(\App\Models\WeaponType::class, 'weapon_type_id');
+    }
+
 
 }
