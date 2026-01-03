@@ -63,4 +63,9 @@ class Weapon extends Model
         );
     }
 
+    public function caliber()
+    {
+        return $this->belongsTo(Caliber::class, 'caliber_id');
+    }
+
 }

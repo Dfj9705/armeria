@@ -83,8 +83,7 @@ return [
     |
     */
 
-    'locale' => 'es',
-
+    'locale' => env('APP_LOCALE', 'es'),
     /*
     |--------------------------------------------------------------------------
     | Application Fallback Locale
@@ -96,7 +95,7 @@ return [
     |
     */
 
-    'fallback_locale' => 'es',
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'es'),
 
     /*
     |--------------------------------------------------------------------------

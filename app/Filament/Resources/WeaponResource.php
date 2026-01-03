@@ -24,6 +24,8 @@ use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use App\Models\Weapon;
 
@@ -72,7 +74,12 @@ class WeaponResource extends Resource
                     ->disabled(fn(Get $get) => blank($get('brand_id')))
                     ->placeholder('Seleccione un modelo'),
 
-                TextInput::make('caliber')->label('Calibre')->required()->maxLength(50),
+                Select::make('caliber_id')
+                    ->label('Calibre')
+                    ->relationship('caliber', 'name', fn($query) => $query->where('is_active', true))
+                    ->searchable()
+                    ->preload()
+                    ->required(),
 
                 TextInput::make('magazine_capacity')
                     ->label('Capacidad del cargador')
@@ -125,14 +132,16 @@ class WeaponResource extends Resource
 
                 TextColumn::make('brand.name')->label('Marca')->sortable()->searchable(),
                 TextColumn::make('brandModel.name')->label('Modelo')->sortable()->searchable(),
-                TextColumn::make('caliber')->label('Calibre')->sortable(),
+                TextColumn::make('caliber.name')->label('Calibre')->sortable(),
                 TextColumn::make('price')->label('Precio')->money('GTQ', true),
                 TextColumn::make('stock')->label('Stock')->badge(),
                 TextColumn::make('status')->label('Estado')->badge(),
-            ])
+            ])->description("Lista de armas")
+
             ->actions([
                 EditAction::make(),
             ]);
+
     }
 
     public static function getPages(): array
