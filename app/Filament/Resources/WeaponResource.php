@@ -10,11 +10,13 @@ use App\Filament\Resources\WeaponResource\RelationManagers\UnitsRelationManager;
 use App\Models\BrandModel;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -25,6 +27,7 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use App\Models\Weapon;
@@ -52,7 +55,17 @@ class WeaponResource extends Resource
                     ->preload()
                     ->live()
                     ->required()
-                    ->afterStateUpdated(fn(Set $set) => $set('brand_model_id', null)),
+                    ->afterStateUpdated(fn(Set $set) => $set('brand_model_id', null))
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Nombre')
+                            ->required()
+                            ->maxLength(80),
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true),
+                    ])
+                    ->createOptionAction(fn($action) => $action->modalHeading('Crear marca')),
 
                 Select::make('brand_model_id')
                     ->label('Modelo')
@@ -72,20 +85,64 @@ class WeaponResource extends Resource
                     ->live()
                     ->required()
                     ->disabled(fn(Get $get) => blank($get('brand_id')))
-                    ->placeholder('Seleccione un modelo'),
+                    ->placeholder('Seleccione un modelo')
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Nombre del modelo')
+                            ->required()
+                            ->maxLength(80),
+
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true),
+                    ])
+                    ->createOptionUsing(function (array $data, Get $get) {
+                        // brand_id viene del otro select
+                        return BrandModel::create([
+                            'brand_id' => $get('brand_id'),
+                            'name' => $data['name'],
+                            'is_active' => $data['is_active'] ?? true,
+                        ])->getKey();
+                    }),
 
                 Select::make('caliber_id')
                     ->label('Calibre')
                     ->relationship('caliber', 'name', fn($query) => $query->where('is_active', true))
                     ->searchable()
                     ->preload()
-                    ->required(),
+                    ->required()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Nombre')
+                            ->required()
+                            ->maxLength(50),
+                        TextInput::make('code')
+                            ->label('Código')
+                            ->maxLength(30),
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true),
+                    ])
+                    ->createOptionAction(fn($action) => $action->modalHeading('Crear calibre')),
                 Select::make('weapon_type_id')
                     ->label('Tipo de arma')
                     ->relationship('type', 'name', fn($query) => $query->where('is_active', true))
                     ->searchable()
                     ->preload()
-                    ->required(),
+                    ->required()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Nombre')
+                            ->required()
+                            ->maxLength(50),
+                        TextInput::make('code')
+                            ->label('Código')
+                            ->maxLength(30),
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true),
+                    ])
+                    ->createOptionAction(fn($action) => $action->modalHeading('Crear tipo de arma')),
 
                 TextInput::make('magazine_capacity')
                     ->label('Capacidad del cargador')
@@ -120,8 +177,11 @@ class WeaponResource extends Resource
                     ->image()
                     ->multiple()
                     ->reorderable()
+                    ->openable()
+                    ->imagePreviewHeight(120)
                     ->directory('weapons')
                     ->disk('public')
+                    ->appendFiles()
                     ->maxFiles(8),
             ]),
         ]);
@@ -144,7 +204,20 @@ class WeaponResource extends Resource
                 TextColumn::make('stock')->label('Stock')->badge(),
                 TextColumn::make('status')->label('Estado')->badge(),
             ])->description("Lista de armas")
-
+            ->filters([
+                SelectFilter::make('brand_id')
+                    ->label('Marca')
+                    ->relationship('brand', 'name'),
+                SelectFilter::make('brandModel_id')
+                    ->label('Modelo')
+                    ->relationship('brandModel', 'name'),
+                SelectFilter::make('caliber_id')
+                    ->label('Calibre')
+                    ->relationship('caliber', 'name'),
+                SelectFilter::make('weapon_type_id')
+                    ->label('Tipo de arma')
+                    ->relationship('type', 'name'),
+            ])
             ->actions([
                 EditAction::make(),
             ]);
