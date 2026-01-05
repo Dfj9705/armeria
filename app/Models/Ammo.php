@@ -19,6 +19,7 @@ class Ammo extends Model
         'notes',
         'moved_at',
         'user_id',
+        'images',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class Ammo extends Model
         'unit_cost_box' => 'decimal:2',
         'boxes' => 'integer',
         'rounds' => 'integer',
+        'images' => 'array',
     ];
 
     public function brand()

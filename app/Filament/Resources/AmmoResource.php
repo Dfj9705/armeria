@@ -15,6 +15,14 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\CreateAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -128,52 +136,52 @@ class AmmoResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('images.0')
-                    ->label('Img')
-                    ->square(),
-
-                Tables\Columns\TextColumn::make('brand.name')
+                ImageColumn::make('images')
+                    ->label('Foto')
+                    ->circular()
+                    ->getStateUsing(fn($record) => $record->images[0] ?? null),
+                TextColumn::make('brand.name')
                     ->label('Marca')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('caliber.name')
+                TextColumn::make('caliber.name')
                     ->label('Calibre')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Variante')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('price')
+                TextColumn::make('price')
                     ->label('Precio')
                     ->money('GTQ', true)
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('stock_boxes')
+                TextColumn::make('stock_boxes')
                     ->label('Stock (cajas)')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('stock_rounds')
+                TextColumn::make('stock_rounds')
                     ->label('Stock (cartuchos)')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Activo')
                     ->boolean(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
+                CreateAction::make(),
             ]);
     }
 
