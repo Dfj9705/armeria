@@ -12,6 +12,7 @@ use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -50,7 +51,11 @@ class WeaponResource extends Resource
             Section::make('Datos del arma')->schema([
                 Select::make('brand_id')
                     ->label('Marca')
-                    ->relationship('brand', 'name')
+                    ->relationship(
+                        name: 'brand',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn($query) => $query->where('type', 'gun'),
+                    )
                     ->searchable()
                     ->preload()
                     ->live()
@@ -61,6 +66,11 @@ class WeaponResource extends Resource
                             ->label('Nombre')
                             ->required()
                             ->maxLength(80),
+                        Radio::make('type')
+                            ->options([
+                                'gun' => 'Arma de fuego'
+                            ])->default('gun')
+                            ->required(),
                         Toggle::make('is_active')
                             ->label('Activo')
                             ->default(true),
