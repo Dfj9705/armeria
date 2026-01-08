@@ -20,7 +20,7 @@ class BrandResource extends Resource
     protected static ?string $navigationGroup = 'Catálogos';
     protected static ?string $modelLabel = 'Marca';
     protected static ?string $pluralModelLabel = 'Marcas';
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-tag';
     protected static ?int $navigationSort = 10;
 
     public static function form(Form $form): Form
@@ -34,6 +34,7 @@ class BrandResource extends Resource
                     ->options([
                         'gun' => 'Arma de fuego',
                         'ammunition' => 'Municion',
+                        'accessory' => 'Accesorio',
                     ])->default('gun')
                     ->required(),
                 Forms\Components\Toggle::make('is_active')
@@ -65,6 +66,7 @@ class BrandResource extends Resource
                     ->options([
                         'gun' => 'Arma de fuego',
                         'ammunition' => 'Municion',
+                        'accessory' => 'Accesorio',
                     ])
             ])
             ->actions([
