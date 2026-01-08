@@ -20,6 +20,7 @@ class Accessory extends Model
         'unit_cost',
         'unit_price',
         'stock_min',
+        'images',
         'is_active',
         'created_by',
         'updated_by',
@@ -29,6 +30,7 @@ class Accessory extends Model
         'is_active' => 'boolean',
         'unit_cost' => 'decimal:2',
         'unit_price' => 'decimal:2',
+        'images' => 'array',
     ];
 
     public function category(): BelongsTo

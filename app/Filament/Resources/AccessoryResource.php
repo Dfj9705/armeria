@@ -7,6 +7,7 @@ use App\Filament\Resources\AccessoryResource\RelationManagers;
 use App\Filament\Resources\AccessoryResource\RelationManagers\MovementsRelationManager;
 use App\Models\Accessory;
 use Filament\Forms;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -113,6 +114,8 @@ class AccessoryResource extends Resource
                     Toggle::make('is_active')
                         ->label('Activo')
                         ->default(true),
+
+
                 ]),
 
             Section::make('Descripción')
@@ -122,12 +125,30 @@ class AccessoryResource extends Resource
                         ->rows(4)
                         ->columnSpanFull(),
                 ]),
+
+            Section::make('Imágenes')->schema([
+                FileUpload::make('images')
+                    ->label('Fotos')
+                    ->image()
+                    ->multiple()
+                    ->reorderable()
+                    ->openable()
+                    ->imagePreviewHeight(120)
+                    ->directory('accessories')
+                    ->disk('public')
+                    ->appendFiles()
+                    ->maxFiles(8),
+            ]),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
+            Tables\Columns\ImageColumn::make('images.0')
+                ->label('Foto')
+                ->disk('public')
+                ->circular(),
             Tables\Columns\TextColumn::make('category.name')->label('Categoría')->sortable()->searchable(),
             Tables\Columns\TextColumn::make('brand.name')->label('Marca')->sortable()->searchable(),
             Tables\Columns\TextColumn::make('name')->label('Accesorio')->sortable()->searchable(),
