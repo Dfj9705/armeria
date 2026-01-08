@@ -44,7 +44,20 @@ class AccessoryResource extends Resource
                         ->searchable()
                         ->preload()
                         ->required()
-                        ->createOptionAction(fn($action) => $action->modalHeading('Crear categoría')),
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Nombre')
+                                ->required()
+                                ->maxLength(80)
+                                ->unique(table: 'accessory_categories', column: 'name', ignoreRecord: true),
+
+                            Forms\Components\Toggle::make('is_active')
+                                ->label('Activo')
+                                ->default(true),
+                        ])
+                        ->createOptionAction(
+                            fn($action) => $action->modalHeading('Crear categoría')
+                        ),
 
                     Select::make('brand_id')
                         ->label('Marca')
