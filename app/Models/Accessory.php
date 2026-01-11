@@ -24,6 +24,7 @@ class Accessory extends Model
         'is_active',
         'created_by',
         'updated_by',
+        'compatible_brand_model_id',
     ];
 
     protected $casts = [
@@ -60,4 +61,23 @@ class Accessory extends Model
     {
         return $this->current_stock <= $this->stock_min;
     }
+
+    public function compatibleBrandModel()
+    {
+        return $this->belongsTo(BrandModel::class, 'compatible_brand_model_id');
+    }
+
+    public function compatibleBrand()
+    {
+        return $this->hasOneThrough(
+            Brand::class,
+            BrandModel::class,
+            'id',       // Foreign key on brand_models...
+            'id',       // Foreign key on brands...
+            'compatible_brand_model_id', // Local key on accessories...
+            'brand_id'  // Local key on brand_models...
+        );
+    }
+
+
 }

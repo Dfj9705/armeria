@@ -6,6 +6,8 @@ use App\Filament\Resources\AccessoryResource\Pages;
 use App\Filament\Resources\AccessoryResource\RelationManagers;
 use App\Filament\Resources\AccessoryResource\RelationManagers\MovementsRelationManager;
 use App\Models\Accessory;
+use App\Models\Brand;
+use App\Models\BrandModel;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -15,6 +17,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -141,6 +145,78 @@ class AccessoryResource extends Resource
                     ->appendFiles()
                     ->maxFiles(8),
             ]),
+
+            Section::make('Compatibilidad')
+                ->columns(2)
+                ->schema([
+                    // Campo VIRTUAL (no existe en DB): solo sirve para filtrar
+                    Select::make('compat_brand_id')
+                        ->label('Marca compatible')
+                        ->options(
+                            fn() => Brand::query()
+                                ->where('type', 'gun')
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->live()
+                        ->afterStateUpdated(function (Set $set) {
+                            // al cambiar marca, limpiamos el modelo compatible
+                            $set('compatible_brand_model_id', null);
+                        })
+                        ->afterStateHydrated(function (Set $set, Get $get, $state) {
+                            if ($state)
+                                return; // si ya hay algo, no tocar
+                
+                            $modelId = $get('compatible_brand_model_id');
+                            if (!$modelId)
+                                return;
+
+                            $brandId = BrandModel::query()->whereKey($modelId)->value('brand_id');
+                            $set('compat_brand_id', $brandId);
+                        })
+                        ->dehydrated(false) // <- clave: NO se guarda en accessories
+                        ->placeholder('Seleccione una marca'),
+
+                    // Campo REAL (sí existe en DB): compatible_brand_model_id
+                    Select::make('compatible_brand_model_id')
+                        ->label('Modelo compatible')
+                        ->options(function (Get $get) {
+                            $brandId = $get('compat_brand_id');
+                            if (!$brandId)
+                                return [];
+
+                            return BrandModel::query()
+                                ->where('brand_id', $brandId)
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
+                        ->preload()
+                        ->required()
+                        ->disabled(fn(Get $get) => blank($get('compat_brand_id')))
+                        ->placeholder('Seleccione un modelo')
+                        ->createOptionForm([
+                            TextInput::make('name')
+                                ->label('Nombre del modelo')
+                                ->required()
+                                ->maxLength(80),
+                            Toggle::make('is_active')
+                                ->label('Activo')
+                                ->default(true),
+                        ])
+                        ->createOptionUsing(function (array $data, Get $get) {
+                            return BrandModel::create([
+                                'brand_id' => $get('compat_brand_id'),
+                                'name' => $data['name'],
+                                'is_active' => $data['is_active'] ?? true,
+                            ])->getKey();
+                        }),
+                ])
         ]);
     }
 
@@ -155,7 +231,17 @@ class AccessoryResource extends Resource
             Tables\Columns\TextColumn::make('brand.name')->label('Marca')->sortable()->searchable(),
             Tables\Columns\TextColumn::make('name')->label('Accesorio')->sortable()->searchable(),
             Tables\Columns\TextColumn::make('sku')->label('SKU')->toggleable()->searchable(),
+            Tables\Columns\TextColumn::make('compatibleBrandModel.brand.name')
+                ->label('Marca compatible')
+                ->toggleable()
+                ->sortable()
+                ->searchable(),
 
+            Tables\Columns\TextColumn::make('compatibleBrandModel.name')
+                ->label('Modelo compatible')
+                ->toggleable()
+                ->sortable()
+                ->searchable(),
             Tables\Columns\TextColumn::make('current_stock')
                 ->label('Stock')
                 ->state(fn(Accessory $record) => $record->current_stock)
