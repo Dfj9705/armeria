@@ -154,9 +154,13 @@ class AmmoResource extends Resource
                     ->label('Variante')
                     ->searchable(),
 
-                TextColumn::make('price')
-                    ->label('Precio')
+                TextColumn::make('price_per_box')
+                    ->label('Precio por caja')
                     ->money('GTQ', true)
+                    ->sortable(),
+
+                TextColumn::make('rounds_per_box')
+                    ->label('Cartuchos por caja')
                     ->sortable(),
 
                 TextColumn::make('stock_boxes')

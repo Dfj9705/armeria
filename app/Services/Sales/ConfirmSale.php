@@ -32,6 +32,7 @@ class ConfirmSale
             foreach ($sale->items as $item) {
                 $sellable = $item->sellable;
 
+                // Recalcular totales para evitar manipulación
                 $qty = (float) $item->qty;
                 $unitPrice = (float) $item->unit_price;
 
@@ -45,15 +46,21 @@ class ConfirmSale
 
                 $subtotal += $lineTotal;
 
-                // ====== ARMAS (WeaponUnit) ======
+                // ===== ARMAS (WeaponUnit) =====
                 if ($sellable instanceof WeaponUnit) {
-                    if ($qty != 1.0) {
-                        throw ValidationException::withMessages(['items' => 'Un arma debe tener cantidad 1.']);
+                    if ($item->uom_snapshot !== 'UNI') {
+                        $item->uom_snapshot = 'UNI';
+                        $item->save();
                     }
 
-                    if ($sellable->status !== 'in_stock') {
+                    if ((float) $item->qty !== 1.0) {
+                        $item->qty = 1;
+                        $item->save();
+                    }
+
+                    if ($sellable->status !== 'IN_STOCK') {
                         throw ValidationException::withMessages([
-                            'items' => "Arma serie {$sellable->serial_number} no disponible."
+                            'items' => "Arma serie {$sellable->serial_number} no disponible.",
                         ]);
                     }
 
@@ -65,22 +72,28 @@ class ConfirmSale
                         'user_id' => $userId,
                     ]);
 
-                    $sellable->update(['status' => 'sold']);
+                    $sellable->update(['status' => 'SOLD']);
                 }
 
-                // ====== MUNICIÓN (Ammo) ======
+                // ===== MUNICIÓN (Ammo) =====
                 elseif ($sellable instanceof Ammo) {
                     $meta = $item->meta ?? [];
                     $boxes = $meta['boxes'] ?? null;
                     $rounds = $meta['rounds'] ?? null;
 
-                    if ($boxes === null && $rounds === null) {
-                        throw ValidationException::withMessages([
-                            'items' => 'Munición debe indicar meta.boxes o meta.rounds.'
-                        ]);
+                    if ($item->uom_snapshot === 'CJ') {
+                        if ($boxes === null || (int) $boxes <= 0) {
+                            throw ValidationException::withMessages(['items' => 'Munición por caja requiere boxes > 0.']);
+                        }
+                    } else {
+                        // UNI
+                        if ($rounds === null || (int) $rounds <= 0) {
+                            throw ValidationException::withMessages(['items' => 'Munición suelta requiere rounds > 0.']);
+                        }
                     }
-
-                    // Aquí puedes meter tu validación de saldo (sumatoria IN-OUT)
+                    if ($sellable->stock_boxes < $boxes || $sellable->stock_rounds < $rounds) {
+                        throw ValidationException::withMessages(['items' => 'Munición no disponible.']);
+                    }
                     AmmoMovement::create([
                         'ammo_id' => $sellable->id,
                         'type' => 'OUT',
@@ -93,9 +106,12 @@ class ConfirmSale
                     ]);
                 }
 
-                // ====== ACCESORIOS (Accessory) ======
+
+                // ===== ACCESORIOS (Accessory) =====
                 elseif ($sellable instanceof Accessory) {
-                    // validar saldo con tu lógica actual si deseas
+                    if ($sellable->getCurrentStockAttribute() < $qty) {
+                        throw ValidationException::withMessages(['items' => 'Accesorio no disponible.']);
+                    }
                     AccessoryMovement::create([
                         'accessory_id' => $sellable->id,
                         'type' => 'out',

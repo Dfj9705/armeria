@@ -65,6 +65,7 @@ class MovementsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tipo')
                     ->formatStateUsing(fn(string $state) => $state === 'in' ? 'Ingreso' : 'Egreso')
+                    ->color(fn(string $state) => $state === 'in' ? 'success' : 'danger')
                     ->badge(),
                 Tables\Columns\TextColumn::make('quantity')->label('Cantidad')->sortable(),
                 Tables\Columns\TextColumn::make('unit_cost')->label('Costo')->money('GTQ')->toggleable(),
@@ -138,6 +139,6 @@ class MovementsRelationManager extends RelationManager
 
                 Tables\Actions\DeleteAction::make(),
             ])
-            ->defaultSort('occurred_at', 'desc');
+            ->defaultSort('occurred_at', 'asc');
     }
 }

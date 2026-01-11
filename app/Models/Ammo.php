@@ -11,7 +11,12 @@ class Ammo extends Model
 
     protected $fillable = [
         'ammo_id',
+        'name',
+        'brand_id',
+        'caliber_id',
         'type',
+        'price_per_box',
+        'rounds_per_box',
         'boxes',
         'rounds',
         'unit_cost_box',
@@ -27,6 +32,7 @@ class Ammo extends Model
         'unit_cost_box' => 'decimal:2',
         'boxes' => 'integer',
         'rounds' => 'integer',
+        'price' => 'decimal:2',
         'images' => 'array',
     ];
 
@@ -75,4 +81,5 @@ class Ammo extends Model
 
         return max($this->stock_rounds, 0) % $rpb;
     }
+
 }
