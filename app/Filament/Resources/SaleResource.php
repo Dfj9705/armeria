@@ -30,6 +30,7 @@ class SaleResource extends Resource
         return $form->schema([
             Forms\Components\Section::make('Encabezado')
                 ->columns(2)
+                ->disabled(fn($record) => $record?->status !== 'draft')
                 ->schema([
                     Forms\Components\Select::make('customer_id')
                         ->label('Cliente')
@@ -50,6 +51,7 @@ class SaleResource extends Resource
                 ]),
 
             Forms\Components\Section::make('Ítems')
+                ->disabled(fn($record) => $record?->status !== 'draft')
                 ->schema([
                     Forms\Components\Repeater::make('items')
                         ->relationship('items')
@@ -289,6 +291,7 @@ class SaleResource extends Resource
 
             Forms\Components\Section::make('Totales')
                 ->columns(3)
+                ->disabled(fn($record) => $record?->status !== 'draft')
                 ->schema([
                     Forms\Components\TextInput::make('subtotal')->disabled()->dehydrated(),
                     Forms\Components\TextInput::make('tax')->disabled()->dehydrated(),

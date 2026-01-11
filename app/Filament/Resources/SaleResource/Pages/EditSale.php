@@ -54,4 +54,20 @@ class EditSale extends EditRecord
                 }),
         ];
     }
+
+    protected function getFormActions(): array
+    {
+        if ($this->record->status !== 'draft') {
+            return []; // sin botones (ni guardar)
+        }
+
+        return parent::getFormActions();
+    }
+
+    protected function beforeSave(): void
+    {
+        if ($this->record->status !== 'draft') {
+            abort(403, 'No puedes modificar una venta confirmada.');
+        }
+    }
 }
