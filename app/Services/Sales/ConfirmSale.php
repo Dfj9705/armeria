@@ -81,36 +81,80 @@ class ConfirmSale
                     $boxes = $meta['boxes'] ?? null;
                     $rounds = $meta['rounds'] ?? null;
 
+                    $available = $this->getAmmoAvailable($sellable->id);
+
+                    // Modo por UOM
                     if ($item->uom_snapshot === 'CJ') {
-                        if ($boxes === null || (int) $boxes <= 0) {
-                            throw ValidationException::withMessages(['items' => 'Munición por caja requiere boxes > 0.']);
+                        $boxes = (int) $boxes;
+                        if ($boxes <= 0) {
+                            throw ValidationException::withMessages([
+                                'items' => 'Munición por caja requiere boxes > 0.',
+                            ]);
                         }
+
+                        if ($available['boxes'] < $boxes) {
+                            throw ValidationException::withMessages([
+                                'items' => "Stock insuficiente (cajas). Disponible: {$available['boxes']}. Solicitado: {$boxes}.",
+                            ]);
+                        }
+
+                        // Forzamos coherencia
+                        $item->qty = $boxes;
+                        $item->meta = ['boxes' => $boxes, 'rounds' => null];
+                        $item->save();
+
+                        AmmoMovement::create([
+                            'ammo_id' => $sellable->id,
+                            'type' => 'OUT',
+                            'boxes' => $boxes,
+                            'rounds' => null,
+                            'unit_cost_box' => null,
+                            'reference' => 'SALE:' . $sale->id,
+                            'moved_at' => now(),
+                            'user_id' => $userId,
+                        ]);
                     } else {
-                        // UNI
-                        if ($rounds === null || (int) $rounds <= 0) {
-                            throw ValidationException::withMessages(['items' => 'Munición suelta requiere rounds > 0.']);
+                        // UNI (suelta)
+                        $rounds = (int) $rounds;
+                        if ($rounds <= 0) {
+                            throw ValidationException::withMessages([
+                                'items' => 'Munición suelta requiere rounds > 0.',
+                            ]);
                         }
+
+                        if ($available['rounds'] < $rounds) {
+                            throw ValidationException::withMessages([
+                                'items' => "Stock insuficiente (cartuchos). Disponible: {$available['rounds']}. Solicitado: {$rounds}.",
+                            ]);
+                        }
+
+                        // Forzamos coherencia
+                        $item->qty = $rounds;
+                        $item->meta = ['boxes' => null, 'rounds' => $rounds];
+                        $item->save();
+
+                        AmmoMovement::create([
+                            'ammo_id' => $sellable->id,
+                            'type' => 'OUT',
+                            'boxes' => null,
+                            'rounds' => $rounds,
+                            'unit_cost_box' => null,
+                            'reference' => 'SALE:' . $sale->id,
+                            'moved_at' => now(),
+                            'user_id' => $userId,
+                        ]);
                     }
-                    if ($sellable->stock_boxes < $boxes || $sellable->stock_rounds < $rounds) {
-                        throw ValidationException::withMessages(['items' => 'Munición no disponible.']);
-                    }
-                    AmmoMovement::create([
-                        'ammo_id' => $sellable->id,
-                        'type' => 'OUT',
-                        'boxes' => $boxes,
-                        'rounds' => $rounds,
-                        'unit_cost_box' => null,
-                        'reference' => 'SALE:' . $sale->id,
-                        'moved_at' => now(),
-                        'user_id' => $userId,
-                    ]);
                 }
 
 
                 // ===== ACCESORIOS (Accessory) =====
                 elseif ($sellable instanceof Accessory) {
-                    if ($sellable->getCurrentStockAttribute() < $qty) {
-                        throw ValidationException::withMessages(['items' => 'Accesorio no disponible.']);
+                    $available = $this->getAccessoryAvailable($sellable->id);
+
+                    if ($available < $qty) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stock insuficiente en accesorio. Disponible: {$available}. Solicitado: {$qty}.",
+                        ]);
                     }
                     AccessoryMovement::create([
                         'accessory_id' => $sellable->id,
@@ -139,4 +183,50 @@ class ConfirmSale
             return $sale->fresh(['items']);
         });
     }
+
+    private function getAccessoryAvailable(int $accessoryId): float
+    {
+        $in = (float) DB::table('accessory_movements')
+            ->where('accessory_id', $accessoryId)
+            ->where('type', 'in')
+            ->sum('quantity');
+
+        $out = (float) DB::table('accessory_movements')
+            ->where('accessory_id', $accessoryId)
+            ->where('type', 'out')
+            ->sum('quantity');
+
+        return $in - $out;
+    }
+
+    private function getAmmoAvailable(int $ammoId): array
+    {
+        // Suma cajas
+        $inBoxes = (int) DB::table('ammo_movements')
+            ->where('ammo_id', $ammoId)
+            ->where('type', 'IN')
+            ->sum(DB::raw('COALESCE(boxes, 0)'));
+
+        $outBoxes = (int) DB::table('ammo_movements')
+            ->where('ammo_id', $ammoId)
+            ->where('type', 'OUT')
+            ->sum(DB::raw('COALESCE(boxes, 0)'));
+
+        // Suma cartuchos
+        $inRounds = (int) DB::table('ammo_movements')
+            ->where('ammo_id', $ammoId)
+            ->where('type', 'IN')
+            ->sum(DB::raw('COALESCE(rounds, 0)'));
+
+        $outRounds = (int) DB::table('ammo_movements')
+            ->where('ammo_id', $ammoId)
+            ->where('type', 'OUT')
+            ->sum(DB::raw('COALESCE(rounds, 0)'));
+
+        return [
+            'boxes' => $inBoxes - $outBoxes,
+            'rounds' => $inRounds - $outRounds,
+        ];
+    }
+
 }
