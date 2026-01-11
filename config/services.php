@@ -31,4 +31,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'tekra' => [
+        'base_url' => env('TEKRA_BASE_URL', 'https://apiseguimiento.tekra.com.gt'),
+        'user' => env('TEKRA_USER'),
+        'pass' => env('TEKRA_PASS'),
+        'empresa' => env('TEKRA_EMPRESA', 1),
+        'cliente' => env('TEKRA_CLIENTE'),
+        'contrato' => env('TEKRA_CONTRATO'),
+    ],
 ];

@@ -30,6 +30,8 @@ class AccessoryResource extends Resource
     protected static ?string $label = 'Accesorio';
     protected static ?string $pluralLabel = 'Accesorios';
 
+    protected static ?int $navigationSort = 3;
+
     public static function form(Form $form): Form
     {
         return $form->schema([

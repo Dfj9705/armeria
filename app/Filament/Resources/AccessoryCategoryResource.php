@@ -18,7 +18,7 @@ class AccessoryCategoryResource extends Resource
     protected static ?string $navigationGroup = 'Catálogos';
     protected static ?string $label = 'Categoría de accesorio';
     protected static ?string $pluralLabel = 'Categorías de accesorios';
-    protected static ?int $navigationSort = 14;
+    protected static ?int $navigationSort = 22;
 
     public static function form(Form $form): Form
     {

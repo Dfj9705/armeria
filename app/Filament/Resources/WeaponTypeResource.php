@@ -22,7 +22,7 @@ class WeaponTypeResource extends Resource
     protected static ?string $modelLabel = 'Tipo de arma';
     protected static ?string $pluralModelLabel = 'Tipo de armas';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?int $navigationSort = 14;
+    protected static ?int $navigationSort = 24;
 
     public static function form(Form $form): Form
     {

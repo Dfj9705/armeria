@@ -22,7 +22,7 @@ class CaliberResource extends Resource
     protected static ?string $pluralModelLabel = 'Calibres';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?int $navigationSort = 12;
+    protected static ?int $navigationSort = 22;
     public static function form(Form $form): Form
     {
         return $form->schema([
