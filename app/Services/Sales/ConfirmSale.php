@@ -35,12 +35,13 @@ class ConfirmSale
                 // Recalcular totales para evitar manipulación
                 $qty = (float) $item->qty;
                 $unitPrice = (float) $item->unit_price;
+                $discount = (float) $item->discount;
 
                 if ($qty <= 0) {
                     throw ValidationException::withMessages(['items' => 'Cantidad inválida.']);
                 }
 
-                $lineTotal = round($qty * $unitPrice, 2);
+                $lineTotal = round($qty * $unitPrice * (1 - $discount), 2);
                 $item->line_total = $lineTotal;
                 $item->save();
 

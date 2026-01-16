@@ -271,6 +271,14 @@ class SaleResource extends Resource
                                     $set('unit_price', $accesory->unit_price * $state);
                                 })
                                 ->columnSpan(1),
+                            Forms\Components\TextInput::make('discount')
+                                ->label('Descuento')
+                                ->numeric()
+                                ->default(0)
+                                ->minValue(0)
+                                ->step(0.01)
+                                ->disabled(fn($record) => $record?->status !== 'draft')
+                                ->columnSpan(1),
 
                             Forms\Components\TextInput::make('unit_price')
                                 ->label('Precio unit.')
@@ -312,6 +320,8 @@ class SaleResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\DeleteAction::make()->disabled(fn($record) => $record?->status !== 'draft'),
             ])
             ->defaultSort('id', 'desc');
     }

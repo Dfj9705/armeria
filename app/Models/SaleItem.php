@@ -16,6 +16,7 @@ class SaleItem extends Model
         'sellable_id',
         'qty',
         'unit_price',
+        'discount',
         'line_total',
         'description_snapshot',
         'uom_snapshot',

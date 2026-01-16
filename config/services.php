@@ -39,4 +39,18 @@ return [
         'cliente' => env('TEKRA_CLIENTE'),
         'contrato' => env('TEKRA_CONTRATO'),
     ],
+
+    'tekra_fel' => [
+        'wsdl' => env('TEKRA_FEL_WSDL'),
+        'url' => env('TEKRA_FEL_URL'),
+        'user' => env('TEKRA_USER'),
+        'pass' => env('TEKRA_PASS'),
+        'cliente' => env('TEKRA_CLIENTE'),
+        'contrato' => env('TEKRA_CONTRATO'),
+        'id_origen' => env('TEKRA_ID_ORIGEN', 'Sistema Facturacion'),
+        'ip_origen' => env('TEKRA_IP_ORIGEN', '127.0.0.1'),
+        'firmar_emisor' => env('TEKRA_FIRMAR_EMISOR', 'SI'),
+        'validar_identificador' => env('TEKRA_VALIDAR_IDENTIFICADOR', 'SI'),
+    ],
+
 ];

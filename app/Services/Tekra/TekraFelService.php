@@ -1,0 +1,183 @@
+<?php
+
+namespace App\Services\Tekra;
+
+use App\Models\Sale;
+use Illuminate\Support\Str;
+use SoapClient;
+use SoapFault;
+
+class TekraFelService
+{
+  public function certificarFactura(Sale $sale): array
+  {
+    $xml = $this->buildFacturaXml($sale);
+
+    $wsdl = config('services.tekra_fel.wsdl');
+
+    $client = new SoapClient($wsdl, [
+      'trace' => true,
+      'exceptions' => true,
+      'cache_wsdl' => WSDL_CACHE_NONE,
+    ]);
+
+    // Nodo Autenticacion (según manual)
+    // pn_validar_identificador: SI/NO valida campo Adenda.DECertificador 
+    $auth = [
+      'pn_usuario' => config('services.tekra_fel.user'),
+      'pn_clave' => config('services.tekra_fel.pass'),
+      'pn_cliente' => config('services.tekra_fel.cliente'),
+      'pn_contrato' => config('services.tekra_fel.contrato'),
+      'pn_id_origen' => config('services.tekra_fel.id_origen'),
+      'pn_ip_origen' => config('services.tekra_fel.ip_origen'),
+      'pn_firmar_emisor' => config('services.tekra_fel.firmar_emisor', 'SI'),
+      'pn_validar_identificador' => config('services.tekra_fel.validar_identificador', 'SI'),
+    ];
+    logger(json_encode($auth));
+    logger($xml);
+
+    try {
+      // El método recibe 2 nodos: Autenticacion y Documento(CDATA) 
+      $resp = $client->__soapCall('CertificacionDocumento', [
+        [
+          'Autenticacion' => $auth,
+          'Documento' => "<![CDATA[" . $xml . "]]>",
+        ]
+      ]);
+      logger($client->__getLastRequest());
+      // TEKRA suele devolver strings dentro de nodos (ResultadoCertificacion JSON y otros)
+      // Ejemplo/valores retorno: UUID, serie, numero, pdf base64 
+      return [
+        'raw' => $resp,
+        'resultado' => (string) ($resp->ResultadoCertificacion ?? ''),
+        'documento_certificado' => (string) ($resp->DocumentoCertificado ?? ''),
+        'pdf_base64' => (string) ($resp->RepresentacionGrafica ?? ''),
+      ];
+    } catch (SoapFault $sf) {
+      logger($sf);
+      logger($client->__getLastRequest());
+    }
+  }
+
+  private function buildFacturaXml(Sale $sale): string
+  {
+    $sale->load('customer', 'items');
+
+    // ⚠️ Ajusta estos datos del emisor a tu config/tabla (por ahora hardcode/config)
+    $emisorNit = config('fel.emisor_nit', '12345678');
+    $emisorNombre = config('fel.emisor_nombre', 'MI EMPRESA');
+    $emisorAfiliacion = config('fel.emisor_iva', 'GEN');
+    $establecimiento = config('fel.emisor_establecimiento', '1');
+
+    $receptorId = $sale->customer?->nit ?: ($sale->customer?->cui ?: 'CF');
+    $receptorNombre = $sale->customer?->tax_name ?: ($sale->customer?->name ?: 'CONSUMIDOR FINAL');
+    $correo = $sale->customer?->email ?: '';
+
+    $numeroAcceso = random_int(100000000, 999999999); // 9 dígitos (SAT)
+
+    $fecha = now()->format('Y-m-d\TH:i:sP'); // -06:00 incluido
+
+    $itemsXml = '';
+    $totalImpuestoIva = 0.0;
+    $granTotal = 0.0;
+
+    foreach ($sale->items as $idx => $item) {
+      $linea = $idx + 1;
+      $cantidad = (float) $item->qty;
+      $precioUnit = round((float) $item->unit_price, 2);
+      $descuento = round((float) $item->discount, 2);
+      $precio = round($cantidad * $precioUnit, 2);
+
+
+      // Asumimos precio incluye IVA (12%); para FEL se reporta MontoGravable + MontoImpuesto.
+      // Ejemplo del manual: MontoGravable y MontoImpuesto por item 
+      $montoGravable = round($precio / 1.12, 5);
+      $montoImpuesto = round($precio - $montoGravable, 5);
+
+      $totalImpuestoIva += $montoImpuesto;
+      $granTotal += $precio;
+
+      $desc = htmlspecialchars($item->description_snapshot ?? 'Item', ENT_XML1);
+
+      $itemsXml .= <<<XML
+<dte:Item NumeroLinea="{$linea}" BienOServicio="B">
+  <dte:Cantidad>{$cantidad}</dte:Cantidad>
+  <dte:Descripcion>{$desc}</dte:Descripcion>
+  <dte:PrecioUnitario>{$precioUnit}</dte:PrecioUnitario>
+  <dte:Precio>{$precio}</dte:Precio>
+  <dte:Descuento>{$descuento}</dte:Descuento>
+  <dte:Impuestos>
+    <dte:Impuesto>
+      <dte:NombreCorto>IVA</dte:NombreCorto>
+      <dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>
+      <dte:MontoGravable>{$montoGravable}</dte:MontoGravable>
+      <dte:MontoImpuesto>{$montoImpuesto}</dte:MontoImpuesto>
+    </dte:Impuesto>
+  </dte:Impuestos>
+  <dte:Total>{$precio}</dte:Total>
+</dte:Item>
+XML;
+    }
+
+    $totalImpuestoIva = round($totalImpuestoIva, 5);
+    $granTotal = round($granTotal, 5);
+
+    // DECertificador: identificador único para evitar doble certificación 
+    $deCertificador = 'SALE-' . $sale->id;
+
+    // Nota: el XML debe ir en CDATA y cuidar caracteres (& debe ir como &amp;) 
+    return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<dte:GTDocumento Version="0.1"
+  xmlns:dte="http://www.sat.gob.gt/dte/fel/0.2.0"
+  xmlns:cfc="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0"
+  xmlns:cex="http://www.sat.gob.gt/face2/ComplementoExportaciones/0.1.0"
+  xmlns:cfe="http://www.sat.gob.gt/face2/ComplementoFacturaEspecial/0.1.0"
+  xmlns:cno="http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0"
+  xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dte:SAT ClaseDocumento="dte">
+    <dte:DTE ID="DatosCertificados">
+      <dte:DatosEmision ID="DatosEmision">
+        <dte:DatosGenerales Tipo="FACT" FechaHoraEmision="{$fecha}" CodigoMoneda="GTQ" NumeroAcceso="{$numeroAcceso}" />
+        <dte:Emisor NITEmisor="{$emisorNit}" NombreEmisor="{$emisorNombre}" CodigoEstablecimiento="{$establecimiento}" NombreComercial="{$emisorNombre}" CorreoEmisor="" AfiliacionIVA="{$emisorAfiliacion}">
+          <dte:DireccionEmisor>
+            <dte:Direccion>Guatemala</dte:Direccion>
+            <dte:CodigoPostal>01010</dte:CodigoPostal>
+            <dte:Municipio>Guatemala</dte:Municipio>
+            <dte:Departamento>GUATEMALA</dte:Departamento>
+            <dte:Pais>GT</dte:Pais>
+          </dte:DireccionEmisor>
+        </dte:Emisor>
+
+        <dte:Receptor IDReceptor="{$receptorId}" NombreReceptor="{$receptorNombre}" CorreoReceptor="{$correo}">
+          <dte:DireccionReceptor>
+            <dte:Direccion>Guatemala</dte:Direccion>
+            <dte:CodigoPostal>0</dte:CodigoPostal>
+            <dte:Municipio></dte:Municipio>
+            <dte:Departamento></dte:Departamento>
+            <dte:Pais>GT</dte:Pais>
+          </dte:DireccionReceptor>
+        </dte:Receptor>
+
+        <dte:Items>
+          {$itemsXml}
+        </dte:Items>
+
+        <dte:Totales>
+          <dte:TotalImpuestos>
+            <dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="{$totalImpuestoIva}" />
+          </dte:TotalImpuestos>
+          <dte:GranTotal>{$granTotal}</dte:GranTotal>
+        </dte:Totales>
+      </dte:DatosEmision>
+    </dte:DTE>
+
+    <dte:Adenda>
+      <DECertificador>{$deCertificador}</DECertificador>
+    </dte:Adenda>
+  </dte:SAT>
+</dte:GTDocumento>
+XML;
+  }
+}
