@@ -14,6 +14,7 @@ class WeaponUnit extends Model
         'status',
         'purchase_cost',
         'notes',
+        'possesion_number',
     ];
 
     public function weapon()

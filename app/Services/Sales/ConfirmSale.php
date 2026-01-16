@@ -59,7 +59,7 @@ class ConfirmSale
                         $item->save();
                     }
 
-                    if ($sellable->status !== 'IN_STOCK') {
+                    if ($sellable->status !== 'IN_STOCK' && $sellable->status !== 'RESERVED') {
                         throw ValidationException::withMessages([
                             'items' => "Arma serie {$sellable->serial_number} no disponible.",
                         ]);
