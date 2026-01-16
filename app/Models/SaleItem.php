@@ -21,6 +21,7 @@ class SaleItem extends Model
         'description_snapshot',
         'uom_snapshot',
         'meta',
+        'authorization_number'
     ];
 
     protected $casts = [

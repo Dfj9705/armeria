@@ -30,7 +30,7 @@ class SaleResource extends Resource
         return $form->schema([
             Forms\Components\Section::make('Encabezado')
                 ->columnSpan('full')
-                ->disabled(fn($record) => $record?->items->isNotEmpty())
+                ->disabled(fn($record) => $record?->items->isNotEmpty() && $record?->status !== 'draft')
                 ->schema([
                         Forms\Components\Select::make('customer_id')
                             ->label('Cliente')
@@ -40,10 +40,19 @@ class SaleResource extends Resource
 
                             ->required(),
 
+                        Forms\Components\Select::make('status')
+                            ->label('Estado')
+                            ->options([
+                                    'draft' => 'Borrador',
+                                ])
+                            ->default('draft')
+                            ->visible(fn($record) => $record?->status === 'draft')
+                            ->required(),
+
                     ]),
 
             Forms\Components\Section::make('Ítems')
-                ->disabled(fn($record) => $record?->items->isNotEmpty())
+                ->disabled(fn($record) => $record?->items->isNotEmpty() && $record?->status !== 'draft')
                 ->schema([
                         Forms\Components\Repeater::make('items')
                             ->relationship('items')
@@ -135,8 +144,11 @@ class SaleResource extends Resource
                                             $set('qty', 1);
                                             $set('uom_snapshot', 'UNI');
 
-                                            $name = $wu->weapon?->name ?? 'Arma';
-                                            $desc = $name . ' - Serie: ' . $wu->serial_number;
+                                            $brand = $wu->weapon?->brand?->name ?? 'Arma';
+                                            $type = $wu->weapon?->type?->name ?? 'Arma';
+                                            $model = $wu->weapon?->brandModel?->name ?? 'Modelo';
+                                            $caliber = $wu->weapon?->caliber?->name ?? 'Calibre';
+                                            $desc = $type . ' - ' . $brand . ' - ' . $model . ' - ' . $caliber . ' - Serie: ' . $wu->serial_number;
 
                                             $set('description_snapshot', $desc);
                                             $set('meta', [
@@ -263,7 +275,8 @@ class SaleResource extends Resource
                                             $accesory = Accessory::find($get('sellable_id'));
                                             $set('unit_price', $accesory->unit_price * $state);
                                         })
-                                        ->columnSpan(1),
+                                        ->columnSpan(3),
+
                                     Forms\Components\TextInput::make('discount')
                                         ->label('Descuento')
                                         ->numeric()
@@ -271,14 +284,26 @@ class SaleResource extends Resource
                                         ->minValue(0)
                                         ->step(0.01)
                                         ->disabled(fn($record) => $record?->status !== 'draft')
-                                        ->columnSpan(1),
+                                        ->columnSpan(3),
 
                                     Forms\Components\TextInput::make('unit_price')
                                         ->label('Precio unit.')
                                         ->numeric()
                                         ->minValue(0)
                                         ->required()
-                                        ->columnSpan(1),
+                                        ->columnSpan(3),
+
+                                    Forms\Components\TextInput::make('authorization_number')
+                                        ->label('Nro. Autorización')
+                                        ->required()
+                                        ->visible(fn(Forms\Get $get) => $get('kind') !== 'accessory')
+                                        ->columnSpan(3)
+                                        ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, $state) {
+                                            if (!$state)
+                                                return;
+
+                                            $set('description_snapshot', $get('description_snapshot') . ' - Autorización: ' . $state);
+                                        }),
 
                                     Forms\Components\Hidden::make('sellable_type'),
                                     Forms\Components\Hidden::make('sellable_id'),
