@@ -13,7 +13,7 @@ class TekraFelService
   public function certificarFactura(Sale $sale): array
   {
     $xml = $this->buildFacturaXml($sale);
-
+    logger($xml);
 
     $wsdl = config('services.tekra_fel.wsdl');
 
@@ -85,6 +85,7 @@ class TekraFelService
         'resultado' => (string) ($resp->ResultadoCertificacion ?? ''),
         'documento_certificado' => (string) ($resp->DocumentoCertificado ?? ''),
         'pdf_base64' => (string) ($resp->RepresentacionGrafica ?? ''),
+        'qr' => (string) ($resp->CodigoQR ?? ''),
       ];
     }
   }
@@ -117,15 +118,15 @@ class TekraFelService
       $precioUnit = round((float) $item->unit_price, 2);
       $descuento = round((float) $item->discount, 2);
       $precio = round($cantidad * $precioUnit, 2);
-
+      $precioFinal = round($precio - $descuento, 2);
 
       // Asumimos precio incluye IVA (12%); para FEL se reporta MontoGravable + MontoImpuesto.
       // Ejemplo del manual: MontoGravable y MontoImpuesto por item 
-      $montoGravable = round($precio / 1.12, 5);
-      $montoImpuesto = round($precio - $montoGravable, 5);
+      $montoGravable = round($precioFinal / 1.12, 5);
+      $montoImpuesto = round($precioFinal - $montoGravable, 5);
 
       $totalImpuestoIva += $montoImpuesto;
-      $granTotal += $precio;
+      $granTotal += $precioFinal;
 
       $desc = htmlspecialchars($item->description_snapshot ?? 'Item', ENT_XML1);
 
@@ -144,7 +145,7 @@ class TekraFelService
       <dte:MontoImpuesto>{$montoImpuesto}</dte:MontoImpuesto>
     </dte:Impuesto>
   </dte:Impuestos>
-  <dte:Total>{$precio}</dte:Total>
+  <dte:Total>{$precioFinal}</dte:Total>
 </dte:Item>
 XML;
     }

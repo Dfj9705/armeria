@@ -290,7 +290,6 @@ class SaleResource extends Resource
                                 ->default(0)
                                 ->minValue(0)
                                 ->step(0.01)
-                                ->disabled(fn($record) => $record?->status !== 'draft')
                                 ->columnSpan(3),
 
                             Forms\Components\TextInput::make('unit_price')
@@ -325,6 +324,8 @@ class SaleResource extends Resource
                                             $set('description_snapshot', $get('ammo_value') . ' Cartuchos de Munición ' . $ammo->brand->name . ' ' . $ammo->caliber->name . ' ' . $ammo->name . ' Autorización: ' . $state);
                                         }
 
+                                    } else {
+                                        $set('description_snapshot', $get('description_snapshot') . ' Autorización: ' . $state);
                                     }
                                 }),
 

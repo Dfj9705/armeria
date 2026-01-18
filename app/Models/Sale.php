@@ -28,6 +28,7 @@ class Sale extends Model
         'fel_estado_documento',
         'fel_nit_certificador',
         'fel_nombre_certificador',
+        'fel_qr',
         'created_by',
         'updated_by',
     ];

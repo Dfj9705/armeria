@@ -77,6 +77,7 @@ class EditSale extends EditRecord
                         $resultado = json_decode($resp['resultado']) ?? '';
                         $documento_certificado = $resp['documento_certificado'] ?? '';
                         $pdf_base64 = $resp['pdf_base64'] ?? '';
+                        $qrCode = $resp['qr'] ?? '';
 
                         logger($resultRaw->NumeroAutorizacion);
                         logger($resultado->error);
@@ -144,7 +145,8 @@ class EditSale extends EditRecord
                             'fel_nombre_receptor' => $nombreReceptor,
                             'fel_fecha_hora_emision' => $fechaHoraEmision,
                             'fel_status' => 'certified',
-                            'status' => 'certified'
+                            'status' => 'certified',
+                            'fel_qr' => $qrCode
                         ]);
 
 

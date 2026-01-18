@@ -41,7 +41,7 @@ class ConfirmSale
                     throw ValidationException::withMessages(['items' => 'Cantidad inválida.']);
                 }
 
-                $lineTotal = round($qty * $unitPrice * (1 - $discount), 2);
+                $lineTotal = round(($qty * $unitPrice) - $discount, 2);
                 $item->line_total = $lineTotal;
                 $item->save();
 
@@ -170,7 +170,8 @@ class ConfirmSale
                 }
             }
 
-            $tax = round($subtotal * 0.12, 2);
+            $subtotal = round($subtotal / 1.12, 2);
+            $tax = $subtotal * 0.12;
             $total = round($subtotal + $tax, 2);
 
             $sale->update([
