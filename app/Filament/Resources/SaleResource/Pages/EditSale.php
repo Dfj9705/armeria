@@ -153,8 +153,8 @@ class EditSale extends EditRecord
                             ->body("UUID: {$uuid}")
                             ->success()
                             ->send();
-
-                        $this->refreshFormData(['fel_uuid', 'fel_serie', 'fel_numero', 'fel_status']);
+                        $this->record = $this->record->fresh();
+                        $this->refreshFormData(['status', 'fel_uuid', 'fel_serie', 'fel_numero', 'fel_fecha_hora_certificacion', 'fel_nit_certificador', 'fel_nombre_certificador', 'fel_estado_documento', 'fel_nombre_receptor', 'fel_fecha_hora_emision', 'fel_status']);
 
                     } catch (Throwable $e) {
                         $this->record->update(['fel_status' => 'error']);
@@ -165,7 +165,24 @@ class EditSale extends EditRecord
                             ->danger()
                             ->send();
                     }
-                })
+                }),
+
+            Action::make('imprimir_factura')
+                ->label('Imprimir factura')
+                ->color('primary')
+                ->visible(fn() => $this->record->status === 'certified' && !empty($this->record->fel_uuid))
+                ->action(function () {
+
+                }),
+
+            Action::make('anular_factura')
+                ->label('Anular factura')
+                ->color('danger')
+                ->visible(fn() => $this->record->status === 'certified' && !empty($this->record->fel_uuid))
+                ->action(function () {
+
+                }),
+
         ];
 
     }

@@ -153,7 +153,7 @@ XML;
     $granTotal = round($granTotal, 5);
 
     // DECertificador: identificador único para evitar doble certificación 
-    $deCertificador = 'SALE-' . $sale->id;
+    $deCertificador = 'SALE-ARMERIA-' . $sale->id;
 
     // Nota: el XML debe ir en CDATA y cuidar caracteres (& debe ir como &amp;) 
     return <<<XML

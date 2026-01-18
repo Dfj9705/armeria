@@ -103,7 +103,7 @@ class SaleResource extends Resource
                                 ])
                                 ->required()
                                 ->live()
-                                ->afterStateUpdated(function (Forms\Set $set) {
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
                                     // reset campos
                                     $set('sellable_type', null);
                                     $set('sellable_id', null);
@@ -111,6 +111,7 @@ class SaleResource extends Resource
                                     $set('uom_snapshot', 'UNI');
                                     $set('meta', null);
                                     $set('description_snapshot', '');
+                                    $set('kind', $state);
                                 })
                                 ->columnSpan(2),
 
@@ -223,6 +224,7 @@ class SaleResource extends Resource
                                 ->visible(fn(Forms\Get $get) => $get('kind') === 'ammo')
                                 ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, $state) {
                                     $state = (int) $state;
+                                    $set('ammo_value', $state);
                                     $ammo_id = $get('ammo_id');
                                     $ammo = Ammo::find($ammo_id);
                                     if ($state < 1)
@@ -233,11 +235,13 @@ class SaleResource extends Resource
                                         $set('uom_snapshot', 'CJ');
                                         $set('meta', ['boxes' => $state, 'rounds' => null]);
                                         $set('unit_price', $ammo->price_per_box * $state);
+                                        $set('description_snapshot', $state . 'Caja de Munición' . $ammo->brand->name . ' ' . $ammo->caliber->name . ' ' . $ammo->name);
                                     } else {
                                         $set('qty', $state);
                                         $set('uom_snapshot', 'UNI');
                                         $set('meta', ['boxes' => null, 'rounds' => $state]);
                                         $set('unit_price', $ammo->price_per_box / $ammo->rounds_per_box * $state);
+                                        $set('description_snapshot', $state . 'Cartuchos de Munición' . $ammo->brand->name . ' ' . $ammo->caliber->name . ' ' . $ammo->name);
                                     }
                                 })
                                 ->columnSpan(2),
@@ -256,8 +260,9 @@ class SaleResource extends Resource
                                     $set('sellable_type', Accessory::class);
                                     $set('sellable_id', $state);
                                     $set('uom_snapshot', 'UNI');
-                                    $set('description_snapshot', 'Accesorio');
-                                    $set('unit_price', Accessory::find($state)->unit_price * 1);
+                                    $accesory = Accessory::find($state);
+                                    $set('description_snapshot', $accesory->name . " Marca: " . $accesory->brand->name);
+                                    $set('unit_price', $accesory->unit_price * 1);
                                     $set('qty', 1);
                                 })
                                 ->columnSpan(2),
@@ -274,6 +279,8 @@ class SaleResource extends Resource
                                         return;
                                     $accesory = Accessory::find($get('sellable_id'));
                                     $set('unit_price', $accesory->unit_price * $state);
+
+                                    $set('description_snapshot', $accesory->name . " Marca: " . $accesory->brand->name);
                                 })
                                 ->columnSpan(3),
 
@@ -301,8 +308,24 @@ class SaleResource extends Resource
                                 ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, $state) {
                                     if (!$state)
                                         return;
+                                    $tipo = $get('kind');
+                                    if ($tipo == 'accesory') {
+                                        $accesory_id = $get('sellable_id');
+                                        $accesory = Accessory::find($accesory_id);
+                                        $set('description_snapshot', $accesory->name . " Marca: " . $accesory->brand->name);
 
-                                    $set('description_snapshot', $get('description_snapshot') . ' - Autorización: ' . $state);
+                                    } else if ($tipo == 'ammo') {
+                                        $ammo_id = $get('ammo_id');
+                                        $ammo = Ammo::find($ammo_id);
+                                        if ($get('ammo_mode') === 'box') {
+
+                                            $set('description_snapshot', $get('ammo_value') . ' Caja de Munición ' . $ammo->brand->name . ' ' . $ammo->caliber->name . ' ' . $ammo->name . ' Autorización: ' . $state);
+                                        } else {
+
+                                            $set('description_snapshot', $get('ammo_value') . ' Cartuchos de Munición ' . $ammo->brand->name . ' ' . $ammo->caliber->name . ' ' . $ammo->name . ' Autorización: ' . $state);
+                                        }
+
+                                    }
                                 }),
 
                             Forms\Components\Hidden::make('sellable_type'),
