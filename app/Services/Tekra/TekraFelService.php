@@ -75,6 +75,7 @@ class TekraFelService
         'resultado' => (string) ($resp->ResultadoCertificacion ?? ''),
         'documento_certificado' => (string) ($resp->DocumentoCertificado ?? ''),
         'pdf_base64' => (string) ($resp->RepresentacionGrafica ?? ''),
+        'qr' => (string) ($resp->CodigoQR ?? ''),
       ];
     } catch (SoapFault $sf) {
       logger($sf);
