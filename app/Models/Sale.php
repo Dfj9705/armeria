@@ -22,6 +22,12 @@ class Sale extends Model
         'fel_serie',
         'fel_numero',
         'fel_status',
+        'fel_fecha_hora_emision',
+        'fel_fecha_hora_certificacion',
+        'fel_nombre_receptor',
+        'fel_estado_documento',
+        'fel_nit_certificador',
+        'fel_nombre_certificador',
         'created_by',
         'updated_by',
     ];

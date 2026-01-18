@@ -6,12 +6,14 @@ use App\Models\Sale;
 use Illuminate\Support\Str;
 use SoapClient;
 use SoapFault;
+use SoapVar;
 
 class TekraFelService
 {
   public function certificarFactura(Sale $sale): array
   {
     $xml = $this->buildFacturaXml($sale);
+
 
     $wsdl = config('services.tekra_fel.wsdl');
 
@@ -24,8 +26,8 @@ class TekraFelService
     // Nodo Autenticacion (según manual)
     // pn_validar_identificador: SI/NO valida campo Adenda.DECertificador 
     $auth = [
-      'pn_usuario' => config('services.tekra_fel.user'),
-      'pn_clave' => config('services.tekra_fel.pass'),
+      'pn_usuario' => config('services.tekra_fel.user2'),
+      'pn_clave' => config('services.tekra_fel.pass2'),
       'pn_cliente' => config('services.tekra_fel.cliente'),
       'pn_contrato' => config('services.tekra_fel.contrato'),
       'pn_id_origen' => config('services.tekra_fel.id_origen'),
@@ -33,18 +35,39 @@ class TekraFelService
       'pn_firmar_emisor' => config('services.tekra_fel.firmar_emisor', 'SI'),
       'pn_validar_identificador' => config('services.tekra_fel.validar_identificador', 'SI'),
     ];
-    logger(json_encode($auth));
-    logger($xml);
+
+    // $auth = [
+    //   'pn_usuario' => 'tekra_api',
+    //   'pn_clave' => '123456789',
+    //   'pn_cliente' => '2121010001',
+    //   'pn_contrato' => '2122010001',
+    //   'pn_id_origen' => 'Armeria',
+    //   'pn_ip_origen' => '127.0.0.1',
+    //   'pn_firmar_emisor' => 'SI',
+    //   'pn_validar_identificador' => 'SI',
+    // ];
+    $xmlLimpio = preg_replace('/^<!\[CDATA\[(.*)\]\]>$/s', '$1', trim($xml));
+
+    // (opcional) quitar el header xml si el servicio no lo quiere dentro:
+    $xmlLimpio = preg_replace('/^\s*<\?xml[^>]+\?>\s*/', '', $xmlLimpio);
+
+    $documentoNodo = '<Documento><![CDATA[' . $xmlLimpio . ']]></Documento>';
+    $documento = new SoapVar(
+      $documentoNodo,
+      XSD_ANYXML,
+      null,
+      null,
+      'Documento'
+    );
 
     try {
       // El método recibe 2 nodos: Autenticacion y Documento(CDATA) 
       $resp = $client->__soapCall('CertificacionDocumento', [
         [
           'Autenticacion' => $auth,
-          'Documento' => "<![CDATA[" . $xml . "]]>",
+          'Documento' => $documento,
         ]
       ]);
-      logger($client->__getLastRequest());
       // TEKRA suele devolver strings dentro de nodos (ResultadoCertificacion JSON y otros)
       // Ejemplo/valores retorno: UUID, serie, numero, pdf base64 
       return [
@@ -56,6 +79,13 @@ class TekraFelService
     } catch (SoapFault $sf) {
       logger($sf);
       logger($client->__getLastRequest());
+      logger($client->__getLastResponse());
+      return [
+        'raw' => $resp,
+        'resultado' => (string) ($resp->ResultadoCertificacion ?? ''),
+        'documento_certificado' => (string) ($resp->DocumentoCertificado ?? ''),
+        'pdf_base64' => (string) ($resp->RepresentacionGrafica ?? ''),
+      ];
     }
   }
 
@@ -64,8 +94,8 @@ class TekraFelService
     $sale->load('customer', 'items');
 
     // ⚠️ Ajusta estos datos del emisor a tu config/tabla (por ahora hardcode/config)
-    $emisorNit = config('fel.emisor_nit', '12345678');
-    $emisorNombre = config('fel.emisor_nombre', 'MI EMPRESA');
+    $emisorNit = config('fel.emisor_nit', '107346834');
+    $emisorNombre = config('fel.emisor_nombre', 'TEKRA');
     $emisorAfiliacion = config('fel.emisor_iva', 'GEN');
     $establecimiento = config('fel.emisor_establecimiento', '1');
 
@@ -149,7 +179,6 @@ XML;
             <dte:Pais>GT</dte:Pais>
           </dte:DireccionEmisor>
         </dte:Emisor>
-
         <dte:Receptor IDReceptor="{$receptorId}" NombreReceptor="{$receptorNombre}" CorreoReceptor="{$correo}">
           <dte:DireccionReceptor>
             <dte:Direccion>Guatemala</dte:Direccion>
@@ -159,7 +188,9 @@ XML;
             <dte:Pais>GT</dte:Pais>
           </dte:DireccionReceptor>
         </dte:Receptor>
-
+        <dte:Frases>
+          <dte:Frase TipoFrase="1" CodigoEscenario="1"/>
+        </dte:Frases>
         <dte:Items>
           {$itemsXml}
         </dte:Items>

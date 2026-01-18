@@ -11,6 +11,7 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions;
+use Storage;
 use Throwable;
 
 class EditSale extends EditRecord
@@ -67,13 +68,32 @@ class EditSale extends EditRecord
                 ->action(function () {
                     try {
                         $sale = $this->record->fresh(['items', 'customer']);
-                        $resp = app(TekraFelService::class)->certificarFactura($sale);
+                        $certificador = new TekraFelService();
+                        $resp = $certificador->certificarFactura($sale);
 
                         // 1) Si trae PDF base64 directo
+                        $resultRaw = $resp['raw'];
                         $pdfBase64 = $resp['pdf_base64'] ?? '';
+                        $resultado = json_decode($resp['resultado']) ?? '';
+                        $documento_certificado = $resp['documento_certificado'] ?? '';
+                        $pdf_base64 = $resp['pdf_base64'] ?? '';
+
+                        logger($resultRaw->NumeroAutorizacion);
+                        logger($resultado->error);
+                        if ($resultado->error == 1) {
+                            $messages = $resultado->frases;
+                            foreach ($messages as $message) {
+                                Notification::make()
+                                    ->title($message)
+                                    ->warning()
+                                    ->send();
+                            }
+                            return;
+                        }
+
                         if ($pdfBase64) {
                             $pdfPath = "fel/sale-{$sale->id}.pdf";
-                            \Storage::disk('public')->put($pdfPath, base64_decode($pdfBase64));
+                            Storage::disk('public')->put($pdfPath, base64_decode(trim($pdfBase64)));
                         }
 
                         // 2) Parsear DocumentoCertificado para UUID/serie/numero (cuando viene dentro del XML)
@@ -81,26 +101,30 @@ class EditSale extends EditRecord
                         $serie = null;
                         $numero = null;
                         $resultado = null;
+                        $fechaHoraCertificacion = null;
+                        $fechaHoraEmision = null;
+                        $nitCertificador = null;
+                        $nombreCertificador = null;
+                        $estadoDocumento = null;
+                        $nombreReceptor = null;
 
-                        $docXml = $resp['documento_certificado'] ?? '';
-                        if ($docXml) {
-                            $dom = new DOMDocument();
-                            $dom->loadXML($docXml);
 
-                            $xpath = new DOMXPath($dom);
-                            $xpath->registerNamespace('dte', 'http://www.sat.gob.gt/dte/fel/0.2.0');
 
-                            // <dte:NumeroAutorizacion Serie="XXXX" Numero="YYYY">UUID</dte:NumeroAutorizacion>
-                            $nodes = $xpath->query('//dte:NumeroAutorizacion');
-
-                            if ($nodes && $nodes->length) {
-                                $resultado = $nodes->item(0)->attributes->getNamedItem('ResultadoCertificacion')->nodeValue;
-                                $node = $nodes->item(0);
-                                $uuid = trim($node->nodeValue);
-                                $serie = $node->attributes?->getNamedItem('Serie')?->nodeValue;
-                                $numero = $node->attributes?->getNamedItem('Numero')?->nodeValue;
-                            }
+                        // logger(json_encode($resultRaw));
+                        if ($resultRaw) {
+                            $uuid = $resultRaw->NumeroAutorizacion;
+                            $serie = $resultRaw->SerieDocumento;
+                            $numero = $resultRaw->NumeroDocumento;
+                            $fechaHoraCertificacion = $resultRaw->FechaHoraCertificacion;
+                            $nitCertificador = $resultRaw->NITCertificador;
+                            $nombreCertificador = $resultRaw->NombreCertificador;
+                            $estadoDocumento = $resultRaw->EstadoDocumento;
+                            $nombreReceptor = $resultRaw->NombreReceptor ?? $sale->customer->tax_name;
+                            $fechaHoraEmision = $resultRaw->FechaHoraEmision;
                         }
+
+
+                        logger($uuid);
 
                         if (!$uuid) {
                             // si no logramos extraerlo, marca error para revisar
@@ -113,8 +137,16 @@ class EditSale extends EditRecord
                             'fel_uuid' => $uuid,
                             'fel_serie' => $serie,
                             'fel_numero' => $numero,
+                            'fel_fecha_hora_certificacion' => $fechaHoraCertificacion,
+                            'fel_nit_certificador' => $nitCertificador,
+                            'fel_nombre_certificador' => $nombreCertificador,
+                            'fel_estado_documento' => $estadoDocumento,
+                            'fel_nombre_receptor' => $nombreReceptor,
+                            'fel_fecha_hora_emision' => $fechaHoraEmision,
                             'fel_status' => 'certified',
+                            'status' => 'certified'
                         ]);
+
 
                         Notification::make()
                             ->title('Documento certificado')
@@ -126,7 +158,7 @@ class EditSale extends EditRecord
 
                     } catch (Throwable $e) {
                         $this->record->update(['fel_status' => 'error']);
-
+                        logger($e->getMessage());
                         Notification::make()
                             ->title('Error al certificar')
                             ->body($e->getMessage())

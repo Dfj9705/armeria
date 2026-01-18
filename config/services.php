@@ -44,7 +44,9 @@ return [
         'wsdl' => env('TEKRA_FEL_WSDL'),
         'url' => env('TEKRA_FEL_URL'),
         'user' => env('TEKRA_USER'),
+        'user2' => env('TEKRA_USER2'),
         'pass' => env('TEKRA_PASS'),
+        'pass2' => env('TEKRA_PASS2'),
         'cliente' => env('TEKRA_CLIENTE'),
         'contrato' => env('TEKRA_CONTRATO'),
         'id_origen' => env('TEKRA_ID_ORIGEN', 'Sistema Facturacion'),
@@ -52,5 +54,4 @@ return [
         'firmar_emisor' => env('TEKRA_FIRMAR_EMISOR', 'SI'),
         'validar_identificador' => env('TEKRA_VALIDAR_IDENTIFICADOR', 'SI'),
     ],
-
 ];
