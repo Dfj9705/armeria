@@ -11,6 +11,8 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions;
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
 use Storage;
 use Throwable;
 
@@ -174,7 +176,32 @@ class EditSale extends EditRecord
                 ->color('primary')
                 ->visible(fn() => $this->record->status === 'certified' && !empty($this->record->fel_uuid))
                 ->action(function () {
+                    $sale = $this->record;
+                    $html = view('pdf.factura', compact('sale'))->render();
 
+                    $mpdf = new Mpdf([
+                        'format' => [57.15, 300],
+                        'margin_left' => 3,
+                        'margin_right' => 3,
+                        'margin_top' => 3,
+                        'margin_bottom' => 3,
+                        'default_font' => 'monospace',
+                        'default_font_size' => 8,
+                    ]);
+                    $mpdf->WriteHTML($html);
+                    $pdfBinary = $mpdf->Output("factura_{$sale->fel_serie}_{$sale->fel_numero}.pdf", Destination::STRING_RETURN);
+
+                    // 4) Guardar en storage/public (para poder abrirlo)
+                    $relativePath = "fel/factura_{$sale->fel_serie}_{$sale->fel_numero}.pdf";
+                    Storage::disk('public')->put($relativePath, $pdfBinary);
+
+                    // 5) Notificar y abrir URL
+                    Notification::make()
+                        ->title('Factura generada')
+                        ->success()
+                        ->send();
+
+                    $this->redirect(Storage::disk('public')->url($relativePath));
                 }),
 
             Action::make('anular_factura')

@@ -53,5 +53,10 @@ return [
         'ip_origen' => env('TEKRA_IP_ORIGEN', '127.0.0.1'),
         'firmar_emisor' => env('TEKRA_FIRMAR_EMISOR', 'SI'),
         'validar_identificador' => env('TEKRA_VALIDAR_IDENTIFICADOR', 'SI'),
+        'emisor_nit' => env('TEKRA_EMISOR_NIT', '107346834'),
+        'emisor_nombre' => env('TEKRA_EMISOR_NOMBRE', 'TEKRA'),
+        'emisor_afiliacion' => env('TEKRA_EMISOR_AFILIACION', 'GEN'),
+        'establecimiento' => env('TEKRA_ESTABLECIMIENTO', '1'),
+        'emisor_direccion' => env('TEKRA_EMISOR_DIRECCION', '123 Main St'),
     ],
 ];
