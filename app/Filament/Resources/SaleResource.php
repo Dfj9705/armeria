@@ -356,7 +356,20 @@ class SaleResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('#')->sortable(),
                 Tables\Columns\TextColumn::make('customer.name')->label('Cliente')->searchable(),
-                Tables\Columns\TextColumn::make('status')->label('Estado')->sortable()->badge(),
+                Tables\Columns\TextColumn::make('status')->label('Estado')->sortable()->badge()->color(function ($state) {
+                    switch ($state) {
+                        case 'draft':
+                            return 'gray';
+                        case 'confirmed':
+                            return 'info';
+                        case 'certified':
+                            return 'success';
+                        case 'cancelled':
+                            return 'danger';
+                        default:
+                            return 'gray';
+                    }
+                }),
                 Tables\Columns\TextColumn::make('total')->label('Total')->money('GTQ')->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->label('Creada'),
             ])

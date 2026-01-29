@@ -29,6 +29,8 @@ class Sale extends Model
         'fel_nit_certificador',
         'fel_nombre_certificador',
         'fel_qr',
+        'fel_fecha_hora_anulacion',
+        'fel_motivo_anulacion',
         'created_by',
         'updated_by',
     ];

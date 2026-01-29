@@ -8,6 +8,7 @@ use App\Services\Tekra\TekraFelService;
 use DOMDocument;
 use DOMXPath;
 use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions;
@@ -177,17 +178,19 @@ class EditSale extends EditRecord
                 ->visible(fn() => $this->record->status === 'certified' && !empty($this->record->fel_uuid))
                 ->action(function () {
                     $sale = $this->record;
-                    $html = view('pdf.factura', compact('sale'))->render();
+                    $html = view('pdf.factura2', compact('sale'))->render();
 
                     $mpdf = new Mpdf([
-                        'format' => [57.15, 300],
-                        'margin_left' => 3,
-                        'margin_right' => 3,
-                        'margin_top' => 3,
-                        'margin_bottom' => 3,
-                        'default_font' => 'monospace',
-                        'default_font_size' => 8,
+                        'format' => 'Letter',
+                        'margin_left' => 10,
+                        'margin_right' => 10,
+                        'margin_top' => 10,
+                        'margin_bottom' => 10,
+                        'default_font' => 'dejavusans',
+                        'default_font_size' => 9,
                     ]);
+
+
                     $mpdf->WriteHTML($html);
                     $pdfBinary = $mpdf->Output("factura_{$sale->fel_serie}_{$sale->fel_numero}.pdf", Destination::STRING_RETURN);
 
@@ -207,11 +210,132 @@ class EditSale extends EditRecord
             Action::make('anular_factura')
                 ->label('Anular factura')
                 ->color('danger')
-                ->visible(fn() => $this->record->status === 'certified' && !empty($this->record->fel_uuid))
-                ->action(function () {
+                ->requiresConfirmation()
+                ->form([
+                    TextInput::make('motivo')
+                        ->label('Motivo de anulación')
+                        ->required()
+                        ->maxLength(255),
+                ])
 
+                ->visible(fn() => $this->record->status === 'certified' && !empty($this->record->fel_uuid))
+                ->action(function ($data) {
+                    try {
+                        $sale = $this->record->fresh(['customer']);
+
+                        $certificador = new TekraFelService();
+                        $resp = $certificador->anularFactura($sale, $data['motivo']);
+
+                        $raw = $resp['raw'] ?? null;
+                        $resultadoStr = (string) ($resp['resultado'] ?? '');
+                        $anulacionXmlEscapado = (string) ($resp['documento_certificado'] ?? '');
+                        $pdfBase64 = trim((string) ($resp['pdf_base64'] ?? ''));
+
+                        // Evita: Object of class stdClass...
+                        if ($raw) {
+                            logger('ANULACION RAW', (array) $raw);
+                        }
+
+                        // 1) Si ResultadoAnulacion es JSON (como certificación)
+                        $resultadoJson = json_decode($resultadoStr);
+
+                        if ($resultadoJson && ($resultadoJson->error ?? null) == 1) {
+                            foreach (($resultadoJson->frases ?? []) as $msg) {
+                                Notification::make()
+                                    ->title((string) $msg)
+                                    ->warning()
+                                    ->send();
+                            }
+                            return;
+                        }
+
+                        // 2) Si no hay JSON, intentamos validar por XML “AnulacionCertificada”
+                        // viene escapado (&lt; &gt;), primero lo decodificamos
+                        $anulacionXml = '';
+                        if ($anulacionXmlEscapado !== '') {
+                            $anulacionXml = html_entity_decode($anulacionXmlEscapado, ENT_QUOTES | ENT_XML1, 'UTF-8');
+
+                            // opcional: guardarlo para auditoría
+                            // Storage::disk('public')->put("fel/anulacion-sale-{$sale->id}.xml", $anulacionXml);
+                        }
+
+                        // 3) Guardar PDF si vino
+                        if ($pdfBase64 !== '') {
+                            $pdfPath = "fel/anulacion-sale-{$sale->id}.pdf";
+                            Storage::disk('public')->put($pdfPath, base64_decode($pdfBase64));
+                        }
+
+                        // 4) Actualizar estados (ajusta nombres de columnas a tu tabla)
+                        $sale->update([
+                            'status' => 'cancelled',
+                            'fel_status' => 'void',
+                            // si tienes columnas:
+                            'fel_fecha_hora_anulacion' => now(),
+                            'fel_motivo_anulacion' => $data['motivo'],
+                        ]);
+
+                        //TODO:DEVOLVER STOCK, SEGUN TIPO DE PRODUCTO (ARMAS CON NUMERO DE SERIE, MUNICIONES POR CANTIDAD Y TIPO CAJAS O UNIDADES, ACCESORIOS POR CANTIDAD)
+        
+
+                        Notification::make()
+                            ->title('Factura anulada correctamente')
+                            ->success()
+                            ->send();
+
+                        $this->record = $this->record->fresh();
+                        $this->refreshFormData(['status', 'fel_status']);
+
+                    } catch (Throwable $e) {
+                        $this->record->update(['fel_status' => 'error']);
+                        logger($e->getMessage());
+
+                        Notification::make()
+                            ->title('Error al anular')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
                 }),
 
+            Action::make('Imprimir anulación')
+                ->label('Imprimir anulación')
+                ->color('info')
+                ->icon('heroicon-o-printer')
+                ->visible(fn() => $this->record->status === 'cancelled' && !empty($this->record->fel_uuid))
+                ->action(function () {
+                    $sale = $this->record;
+                    $html = view('pdf.factura2', compact('sale'))->render();
+
+                    $mpdf = new Mpdf([
+                        'format' => 'Letter',
+                        'margin_left' => 10,
+                        'margin_right' => 10,
+                        'margin_top' => 10,
+                        'margin_bottom' => 10,
+                        'default_font' => 'dejavusans',
+                        'default_font_size' => 9,
+                    ]);
+
+                    $mpdf->SetWatermarkText('ANULADO');
+                    $mpdf->showWatermarkText = true;
+
+                    $mpdf->WriteHTML($html);
+                    $pdfBinary = $mpdf->Output("factura_{$sale->fel_serie}_{$sale->fel_numero}.pdf", Destination::STRING_RETURN);
+
+                    // 4) Guardar en storage/public (para poder abrirlo)
+                    $relativePath = "fel/factura_anulada_{$sale->fel_serie}_{$sale->fel_numero}.pdf";
+                    Storage::disk('public')->put($relativePath, $pdfBinary);
+
+                    Notification::make()
+                        ->title('Factura anulada correctamente')
+                        ->success()
+                        ->send();
+
+                    $this->record = $this->record->fresh();
+                    $this->refreshFormData(['status', 'fel_status']);
+                    $url = Storage::disk('public')->url($relativePath);
+                    return $this->redirect($url);
+                }),
         ];
 
     }
