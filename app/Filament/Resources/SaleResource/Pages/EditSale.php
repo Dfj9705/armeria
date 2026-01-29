@@ -275,7 +275,7 @@ class EditSale extends EditRecord
                         ]);
 
                         //TODO:DEVOLVER STOCK, SEGUN TIPO DE PRODUCTO (ARMAS CON NUMERO DE SERIE, MUNICIONES POR CANTIDAD Y TIPO CAJAS O UNIDADES, ACCESORIOS POR CANTIDAD)
-        
+                        app(ConfirmSale::class)->handleAnulation($this->record, auth()->id());
 
                         Notification::make()
                             ->title('Factura anulada correctamente')

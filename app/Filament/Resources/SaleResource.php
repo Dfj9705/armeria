@@ -124,6 +124,10 @@ class SaleResource extends Resource
                                         ->orWhere('status', 'reserved')
                                         ->orderBy('serial_number')
                                         ->pluck('serial_number', 'id')
+                                        ->mapWithKeys(function ($serial, $id) {
+                                            // logger($serial, $id);
+                                            return [$id => "Serie: {$serial}"];
+                                        })
                                         ->toArray()
                                 )
                                 ->searchable()
