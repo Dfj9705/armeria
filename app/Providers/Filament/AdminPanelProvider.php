@@ -29,10 +29,23 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->colors([
-                'primary' => Color::Lime,
-
+                'primary' => [
+                    50 => '#FAF7F0',
+                    100 => '#F3E9D6',
+                    200 => '#E4D1A8',
+                    300 => '#D7BC87',
+                    400 => '#C7A86D',
+                    500 => '#B99657',
+                    600 => '#A8874F',
+                    700 => '#8A6E40',
+                    800 => '#6F5734',
+                    900 => '#58452A',
+                ],
             ])
-            ->favicon(asset('escudo.png'))
+            ->favicon(asset('favicon.png'))
+            ->brandLogo(asset('logo.png'))
+            ->darkModeBrandLogo(asset('logo-dark.png'))
+            ->brandLogoHeight('50px')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
