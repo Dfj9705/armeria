@@ -353,6 +353,7 @@ class SaleResource extends Resource
                     Forms\Components\TextInput::make('total')->disabled()->dehydrated(),
                     Forms\Components\TextInput::make('total_paid')->disabled()->dehydrated(),
                     Forms\Components\TextInput::make('pending_amount')->disabled()->dehydrated(),
+                    Forms\Components\Checkbox::make('is_paid')->disabled()->dehydrated()->label('Pagado')->columnSpanFull(),
                 ]),
         ]);
     }

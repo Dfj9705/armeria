@@ -132,7 +132,7 @@ class PaymentsRelationManager extends RelationManager
                         $this->dispatch('refreshSaleTotals');
                     }),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn() => in_array($this->getOwnerRecord()->status, ['confirmed', 'certified'], true))
+                    ->visible(fn() => in_array($this->getOwnerRecord()->status, ['confirmed', 'certified', 'cancelled'], true))
                     ->recordTitle(fn($record) => "Eliminar pago Q{$record->amount}")
                     ->after(function ($record) {
 
