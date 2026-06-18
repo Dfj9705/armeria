@@ -9,12 +9,19 @@ use App\Models\Customer;
 use App\Models\WeaponUnit;
 use App\Models\Ammo;
 use App\Models\Accessory;
+use App\Services\Tekra\TekraContribuyenteService;
 use Filament\Forms;
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 
 class SaleResource extends Resource
 {
@@ -39,7 +46,76 @@ class SaleResource extends Resource
                         ->searchable()
                         ->preload()
 
-                        ->required(),
+                        ->required()
+                        ->createOptionForm([
+                            TextInput::make('nit')
+                                ->label('NIT')
+                                ->required(),
+
+
+                            Actions::make([
+                                Action::make('tekra_lookup')
+                                    ->label('Consultar SAT')
+                                    ->icon('heroicon-o-magnifying-glass')
+                                    ->action(function (Get $get, Set $set) {
+                                        $nit = preg_replace('/[\s-]/', '', $get('nit'));
+                                        if (blank($nit)) {
+                                            Notification::make()
+                                                ->title('Ingresa NIT')
+                                                ->danger()
+                                                ->send();
+                                            return;
+                                        }
+
+                                        $svc = app(TekraContribuyenteService::class);
+
+                                        $response = $svc->consultaNit($nit);
+
+                                        $error = (int) data_get($response, 'resultado.0.error', 1);
+                                        $mensaje = (string) data_get($response, 'resultado.0.mensaje', '');
+
+                                        if ($error !== 0) {
+                                            Notification::make()
+                                                ->title('TEKRA: error')
+                                                ->body($mensaje !== '' ? $mensaje : 'No se pudo consultar.')
+                                                ->danger()
+                                                ->send();
+                                            return;
+                                        }
+
+                                        $datos = data_get($response, 'datos.0', []);
+
+                                        $set('nit', data_get($datos, 'nit', $nit));
+
+                                        $nombreTekra = (string) (data_get($datos, 'nombre') ?? data_get($datos, 'nombre_completo') ?? '');
+                                        $nombreLimpio = trim(preg_replace('/\s+/', ' ', str_replace(',', ' ', $nombreTekra)));
+
+                                        if ($nombreLimpio !== '') {
+                                            $set('name', $nombreLimpio);
+
+                                            if (blank(trim((string) $get('name')))) {
+                                                $set('name', $nombreLimpio);
+                                            }
+                                        }
+
+                                        Notification::make()
+                                            ->title('Datos cargados desde SAT')
+                                            ->success()
+                                            ->send();
+                                    }),
+                            ])->columnSpanFull(),
+
+                            TextInput::make('name')
+                                ->label('Nombre')
+                                ->required(),
+
+                        ])
+                        ->createOptionUsing(function (array $data): int {
+                            return Customer::create([
+                                'nit' => $data['nit'],
+                                'name' => $data['name'],
+                            ])->id;
+                        }),
 
                     Forms\Components\Select::make('status')
                         ->label('Estado')
