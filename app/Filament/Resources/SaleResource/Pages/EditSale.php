@@ -362,6 +362,7 @@ class EditSale extends EditRecord
     {
 
         $this->form->fill([
+            'customer_id' => $this->record->customer_id,
             'status' => $this->record->status,
             'emisor_id' => $this->record->emisor_id,
             'client_id' => $this->record->client_id,
