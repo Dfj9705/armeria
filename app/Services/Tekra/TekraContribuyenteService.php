@@ -24,7 +24,7 @@ class TekraContribuyenteService
         $url = rtrim(config('services.tekra.base_url'), '/')
             . '/certificaciones/contribuyente/contribuyente_consulta';
 
-        return Http::timeout(15)->acceptJson()->post($url, $payload)->json() ?? [];
+        return Http::timeout(15)->withOptions(['verify' => false])->acceptJson()->post($url, $payload)->json() ?? [];
     }
 
     public function consultaCui(string $cui): array

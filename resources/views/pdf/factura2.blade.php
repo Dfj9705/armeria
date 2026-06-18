@@ -55,7 +55,7 @@
 
     <!-- Logo -->
     <div class="col" style="width:8%">
-        <img src="{{ public_path('escudo.png') }}" style="width:100%">
+        <img src="{{ public_path('logo.png') }}" style="width:100%">
     </div>
 
     <!-- Emisor -->

@@ -20,6 +20,7 @@ use Throwable;
 class EditSale extends EditRecord
 {
     protected static string $resource = SaleResource::class;
+    protected $listeners = ['refreshSaleTotals' => 'refreshTotals'];
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
@@ -354,5 +355,22 @@ class EditSale extends EditRecord
         if ($this->record->status !== 'draft') {
             abort(403, 'No puedes modificar una venta confirmada.');
         }
+    }
+
+
+    public function refreshTotals(): void
+    {
+
+        $this->form->fill([
+            'status' => $this->record->status,
+            'emisor_id' => $this->record->emisor_id,
+            'client_id' => $this->record->client_id,
+            'subtotal' => $this->record->subtotal,
+            'tax' => $this->record->tax,
+            'total' => $this->record->total,
+            // si los muestras:
+            'total_paid' => $this->record->total_paid,
+            'pending_amount' => $this->record->pending_amount,
+        ]);
     }
 }

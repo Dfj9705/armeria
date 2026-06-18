@@ -37,6 +37,15 @@ class Sale extends Model
 
     protected $casts = [
         'confirmed_at' => 'datetime',
+        'subtotal' => 'decimal:2',
+        'tax' => 'decimal:2',
+        'total' => 'decimal:2',
+    ];
+
+    protected $appends = [
+        'total_paid',
+        'pending_amount',
+        'is_paid',
     ];
 
     public function items(): HasMany
@@ -48,4 +57,25 @@ class Sale extends Model
     {
         return $this->belongsTo(Customer::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SalePayment::class);
+    }
+
+    public function getTotalPaidAttribute(): float
+    {
+        return (float) $this->payments()->sum('amount');
+    }
+
+    public function getPendingAmountAttribute(): float
+    {
+        return max(0, (float) $this->total - $this->total_paid);
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return $this->pending_amount <= 0;
+    }
+
 }

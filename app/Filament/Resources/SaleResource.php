@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SaleResource\Pages;
+use App\Filament\Resources\SaleResource\RelationManagers\PaymentsRelationManager;
 use App\Models\Sale;
 use App\Models\Customer;
 use App\Models\WeaponUnit;
@@ -350,6 +351,8 @@ class SaleResource extends Resource
                     Forms\Components\TextInput::make('subtotal')->disabled()->dehydrated(),
                     Forms\Components\TextInput::make('tax')->disabled()->dehydrated(),
                     Forms\Components\TextInput::make('total')->disabled()->dehydrated(),
+                    Forms\Components\TextInput::make('total_paid')->disabled()->dehydrated(),
+                    Forms\Components\TextInput::make('pending_amount')->disabled()->dehydrated(),
                 ]),
         ]);
     }
@@ -375,6 +378,21 @@ class SaleResource extends Resource
                     }
                 }),
                 Tables\Columns\TextColumn::make('total')->label('Total')->money('GTQ')->sortable(),
+                Tables\Columns\TextColumn::make('total_paid')
+                    ->label('Pagado')
+                    ->money('GTQ'),
+
+                Tables\Columns\TextColumn::make('pending_amount')
+                    ->label('Pendiente')
+                    ->money('GTQ'),
+                Tables\Columns\TextColumn::make('is_paid')
+                    ->label('Pagado')
+                    ->badge()
+                    ->colors([
+                        'success' => true,
+                        'danger' => false,
+                    ])
+                    ->formatStateUsing(fn($state) => $state ? 'Pagado' : 'Pendiente'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->label('Creada'),
             ])
             ->actions([
@@ -391,6 +409,13 @@ class SaleResource extends Resource
             'index' => Pages\ListSales::route('/'),
             'create' => Pages\CreateSale::route('/create'),
             'edit' => Pages\EditSale::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            'payments' => PaymentsRelationManager::class,
         ];
     }
 }
