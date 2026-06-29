@@ -10,7 +10,8 @@ class WeaponUnitMovement extends Model
     protected $table = 'weapon_unit_movements';
 
     protected $fillable = [
-        'weapon_unit_id', 
+        'weapon_unit_id',
+        'branch_id',
         'type',
         'reference',
         'notes',
@@ -30,5 +31,10 @@ class WeaponUnitMovement extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

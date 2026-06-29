@@ -11,9 +11,11 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Support\Concerns\HasBranchScope;
 
 class MovementsRelationManager extends RelationManager
 {
+    use HasBranchScope;
     protected static string $relationship = 'movements';
     protected static ?string $title = 'Movimientos';
     protected static ?string $recordTitleAttribute = 'id';
@@ -22,6 +24,8 @@ class MovementsRelationManager extends RelationManager
     public function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\Hidden::make('branch_id')
+                ->default(fn() => auth()->user()->branch_id),
             Forms\Components\Hidden::make('type')
                 ->required(),
 
@@ -61,6 +65,9 @@ class MovementsRelationManager extends RelationManager
 
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('branch.name')
+                    ->label('Sucursal')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('occurred_at')->label('Fecha')->dateTime('Y-m-d H:i')->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tipo')
@@ -72,6 +79,15 @@ class MovementsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('reference')->label('Referencia')->toggleable(),
                 Tables\Columns\TextColumn::make('user.name')->label('Usuario')->toggleable(),
             ])
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = auth()->user();
+
+                if ($user->isSuperAdmin()) {
+                    return $query;
+                }
+
+                return $query->where('branch_id', $user->branch_id);
+            })
             ->headerActions([
                 Tables\Actions\CreateAction::make('ingreso')
                     ->label('Ingreso')
@@ -82,7 +98,12 @@ class MovementsRelationManager extends RelationManager
                         $form->fill([
                             'type' => 'in',
                             'occurred_at' => now(),
+                            'branch_id' => auth()->user()->branch_id,
                         ]);
+                    })
+                    ->mutateFormDataUsing(function (array $data) {
+                        $data['branch_id'] = auth()->user()->branch_id;
+                        return $data;
                     }),
 
                 Tables\Actions\CreateAction::make('egreso')
@@ -94,10 +115,22 @@ class MovementsRelationManager extends RelationManager
                         $form->fill([
                             'type' => 'out',
                             'occurred_at' => now(),
+                            'branch_id' => auth()->user()->branch_id,
                         ]);
                     })
+                    ->mutateFormDataUsing(function (array $data) {
+                        $data['branch_id'] = auth()->user()->branch_id;
+                        return $data;
+                    })
                     ->before(function (array $data) {
-                        $stock = $this->getOwnerRecord()->current_stock;
+                        $stock = $this->getOwnerRecord()
+                            ->movements()
+                            ->where('branch_id', auth()->user()->branch_id)
+                            ->selectRaw("
+        COALESCE(SUM(CASE WHEN type = 'in' THEN quantity ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN type = 'out' THEN quantity ELSE 0 END), 0) as stock
+    ")
+                            ->value('stock');
 
                         if ((int) $data['quantity'] > (int) $stock) {
                             Notification::make()
@@ -140,5 +173,12 @@ class MovementsRelationManager extends RelationManager
                 Tables\Actions\DeleteAction::make(),
             ])
             ->defaultSort('occurred_at', 'asc');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return static::applyBranchScope(
+            parent::getEloquentQuery()
+        );
     }
 }

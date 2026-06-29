@@ -48,4 +48,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Branch::class);
     }
+
+    public function isSuperAdmin(): bool
+    {
+        return false;
+    }
 }

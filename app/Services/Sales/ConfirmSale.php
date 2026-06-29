@@ -66,6 +66,7 @@ class ConfirmSale
                     }
 
                     WeaponUnitMovement::create([
+                        'branch_id' => $sale->branch_id,
                         'weapon_unit_id' => $sellable->id,
                         'type' => 'OUT',
                         'reference' => 'SALE:' . $sale->id,
@@ -82,7 +83,7 @@ class ConfirmSale
                     $boxes = $meta['boxes'] ?? null;
                     $rounds = $meta['rounds'] ?? null;
 
-                    $available = $this->getAmmoAvailable($sellable->id);
+                    $available = $this->getAmmoAvailable($sellable->id, $sale->branch_id);
 
                     // Modo por UOM
                     if ($item->uom_snapshot === 'CJ') {
@@ -105,6 +106,7 @@ class ConfirmSale
                         $item->save();
 
                         AmmoMovement::create([
+                            'branch_id' => $sale->branch_id,
                             'ammo_id' => $sellable->id,
                             'type' => 'OUT',
                             'boxes' => $boxes,
@@ -135,6 +137,7 @@ class ConfirmSale
                         $item->save();
 
                         AmmoMovement::create([
+                            'branch_id' => $sale->branch_id,
                             'ammo_id' => $sellable->id,
                             'type' => 'OUT',
                             'boxes' => null,
@@ -150,7 +153,7 @@ class ConfirmSale
 
                 // ===== ACCESORIOS (Accessory) =====
                 elseif ($sellable instanceof Accessory) {
-                    $available = $this->getAccessoryAvailable($sellable->id);
+                    $available = $this->getAccessoryAvailable($sellable->id, $sale->branch_id);
 
                     if ($available < $qty) {
                         throw ValidationException::withMessages([
@@ -164,6 +167,7 @@ class ConfirmSale
                         'occurred_at' => now(),
                         'reference' => 'SALE:' . $sale->id,
                         'user_id' => $userId,
+                        'branch_id' => $sale->branch_id,
                     ]);
                 } else {
                     throw ValidationException::withMessages(['items' => 'Ítem no soportado.']);
@@ -231,7 +235,7 @@ class ConfirmSale
                     $boxes = $meta['boxes'] ?? null;
                     $rounds = $meta['rounds'] ?? null;
 
-                    $available = $this->getAmmoAvailable($sellable->id);
+                    $available = $this->getAmmoAvailable($sellable->id, $sale->branch_id);
 
                     // Modo por UOM
                     if ($item->uom_snapshot === 'CJ') {
@@ -283,42 +287,48 @@ class ConfirmSale
         });
     }
 
-    private function getAccessoryAvailable(int $accessoryId): float
+    private function getAccessoryAvailable(int $accessoryId, int $branchId): float
     {
         $in = (float) DB::table('accessory_movements')
             ->where('accessory_id', $accessoryId)
+            ->where('branch_id', $branchId)
             ->where('type', 'in')
             ->sum('quantity');
 
         $out = (float) DB::table('accessory_movements')
             ->where('accessory_id', $accessoryId)
+            ->where('branch_id', $branchId)
             ->where('type', 'out')
             ->sum('quantity');
 
         return $in - $out;
     }
 
-    private function getAmmoAvailable(int $ammoId): array
+    private function getAmmoAvailable(int $ammoId, int $branchId): array
     {
         // Suma cajas
         $inBoxes = (int) DB::table('ammo_movements')
             ->where('ammo_id', $ammoId)
+            ->where('branch_id', $branchId)
             ->where('type', 'IN')
             ->sum(DB::raw('COALESCE(boxes, 0)'));
 
         $outBoxes = (int) DB::table('ammo_movements')
             ->where('ammo_id', $ammoId)
+            ->where('branch_id', $branchId)
             ->where('type', 'OUT')
             ->sum(DB::raw('COALESCE(boxes, 0)'));
 
         // Suma cartuchos
         $inRounds = (int) DB::table('ammo_movements')
             ->where('ammo_id', $ammoId)
+            ->where('branch_id', $branchId)
             ->where('type', 'IN')
             ->sum(DB::raw('COALESCE(rounds, 0)'));
 
         $outRounds = (int) DB::table('ammo_movements')
             ->where('ammo_id', $ammoId)
+            ->where('branch_id', $branchId)
             ->where('type', 'OUT')
             ->sum(DB::raw('COALESCE(rounds, 0)'));
 

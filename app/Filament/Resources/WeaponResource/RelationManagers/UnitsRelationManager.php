@@ -14,6 +14,7 @@ use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,9 @@ class UnitsRelationManager extends RelationManager
             ->heading('Movimientos')
             ->recordTitleAttribute('serial_number')
             ->columns([
+                Tables\Columns\TextColumn::make('branch.name')
+                    ->label('Sucursal')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('serial_number')
                     ->label('No. Serie')
                     ->searchable(),
@@ -60,6 +64,15 @@ class UnitsRelationManager extends RelationManager
                     ->label('Ingreso')
                     ->dateTime(),
             ])
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = auth()->user();
+
+                if ($user->isSuperAdmin()) {
+                    return $query;
+                }
+
+                return $query->where('branch_id', $user->branch_id);
+            })
             ->headerActions([
                 Action::make('ingreso')
                     ->label('Ingreso')
@@ -154,6 +167,7 @@ class UnitsRelationManager extends RelationManager
 
                             foreach ($serials as $index => $serial) {
                                 $unit = $weapon->units()->create([
+                                    'branch_id' => auth()->user()->branch_id,
                                     'serial_number' => $serial,
                                     'possesion_number' => $data['possesion_numbers'],
                                     'status' => 'IN_STOCK',
@@ -162,6 +176,7 @@ class UnitsRelationManager extends RelationManager
                                 ]);
 
                                 $unit->movements()->create([
+                                    'branch_id' => auth()->user()->branch_id,
                                     'type' => 'IN',
                                     'reference' => $data['reference'] ?? null,
                                     'notes' => $data['notes'] ?? null,
@@ -318,6 +333,7 @@ class UnitsRelationManager extends RelationManager
                                         'notes' => $data['notes'],
                                         'moved_at' => now(),
                                         'user_id' => auth()->id(),
+                                        'branch_id' => auth()->user()->branch_id,
                                     ]);
                                     // (Opcional a futuro) registrar movimiento OUT
                                 }
@@ -380,6 +396,7 @@ class UnitsRelationManager extends RelationManager
                                     'notes' => $data['notes'] ?? null,
                                     'moved_at' => $data['moved_at'] ?? now(),
                                     'user_id' => Auth::id(),
+                                    'branch_id' => auth()->user()->branch_id,
                                 ]);
                             }
 
@@ -497,6 +514,7 @@ class UnitsRelationManager extends RelationManager
                             'notes' => $data['notes'],
                             'moved_at' => now(),
                             'user_id' => auth()->id(),
+                            'branch_id' => auth()->user()->branch_id,
                         ]);
                         Notification::make()
                             ->title('Salida registrada')
@@ -547,6 +565,7 @@ class UnitsRelationManager extends RelationManager
                             'notes' => $data['notes'] ?? null,
                             'moved_at' => $data['moved_at'] ?? now(),
                             'user_id' => Auth::id(),
+                            'branch_id' => auth()->user()->branch_id,
                         ]);
 
                         Notification::make()

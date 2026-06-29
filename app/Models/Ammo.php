@@ -55,11 +55,11 @@ class Ammo extends Model
     {
         $rpb = (int) ($this->rounds_per_box ?? 0);
 
-        $inBoxes = (int) $this->movements()->where('type', 'IN')->sum('boxes');
-        $outBoxes = (int) $this->movements()->where('type', 'OUT')->sum('boxes');
+        $inBoxes = (int) $this->movements()->where('type', 'IN')->where('branch_id', auth()->user()->branch_id)->sum('boxes');
+        $outBoxes = (int) $this->movements()->where('type', 'OUT')->where('branch_id', auth()->user()->branch_id)->sum('boxes');
 
-        $inRounds = (int) $this->movements()->where('type', 'IN')->sum('rounds');
-        $outRounds = (int) $this->movements()->where('type', 'OUT')->sum('rounds');
+        $inRounds = (int) $this->movements()->where('type', 'IN')->where('branch_id', auth()->user()->branch_id)->sum('rounds');
+        $outRounds = (int) $this->movements()->where('type', 'OUT')->where('branch_id', auth()->user()->branch_id)->sum('rounds');
 
         return ($inBoxes * $rpb + $inRounds) - ($outBoxes * $rpb + $outRounds);
     }
@@ -82,4 +82,33 @@ class Ammo extends Model
         return max($this->stock_rounds, 0) % $rpb;
     }
 
+    public function stockByBranch(?int $branchId): array
+    {
+        $query = $this->movements();
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        $inBoxes = (int) (clone $query)
+            ->where('type', 'IN')
+            ->sum('boxes');
+
+        $outBoxes = (int) (clone $query)
+            ->where('type', 'OUT')
+            ->sum('boxes');
+
+        $inRounds = (int) (clone $query)
+            ->where('type', 'IN')
+            ->sum('rounds');
+
+        $outRounds = (int) (clone $query)
+            ->where('type', 'OUT')
+            ->sum('rounds');
+
+        return [
+            'boxes' => $inBoxes - $outBoxes,
+            'rounds' => $inRounds - $outRounds,
+        ];
+    }
 }

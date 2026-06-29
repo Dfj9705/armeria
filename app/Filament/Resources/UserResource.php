@@ -2,23 +2,21 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\BranchResource\Pages;
-use App\Filament\Resources\BranchResource\RelationManagers;
-use App\Models\Branch;
+use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Hash;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use App\Support\Concerns\HasBranchScope;
 
-class BranchResource extends Resource
+class UserResource extends Resource
 {
-    use HasBranchScope;
-
-    protected static ?string $model = Branch::class;
+    protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -31,25 +29,27 @@ class BranchResource extends Resource
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('code')
-                    ->label('Código')
+                Forms\Components\TextInput::make('email')
+                    ->label('Correo')
+                    ->email()
                     ->required()
                     ->unique(ignoreRecord: true)
-                    ->maxLength(50),
+                    ->maxLength(255),
 
-                Forms\Components\TextInput::make('phone')
-                    ->label('Teléfono')
-                    ->tel()
-                    ->maxLength(50),
+                Forms\Components\TextInput::make('password')
+                    ->label('Contraseña')
+                    ->password()
+                    ->dehydrateStateUsing(fn($state) => filled($state) ? Hash::make($state) : null)
+                    ->dehydrated(fn($state) => filled($state))
+                    ->required(fn(string $operation): bool => $operation === 'create')
+                    ->maxLength(255),
 
-                Forms\Components\Textarea::make('address')
-                    ->label('Dirección')
-                    ->rows(3)
-                    ->columnSpanFull(),
-
-                Forms\Components\Toggle::make('is_active')
-                    ->label('Activa')
-                    ->default(true),
+                Forms\Components\Select::make('branch_id')
+                    ->label('Sucursal')
+                    ->relationship('branch', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->nullable(),
             ]);
     }
 
@@ -58,30 +58,24 @@ class BranchResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Nombre')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('email')
+                    ->label('Correo')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('branch.name')
                     ->label('Sucursal')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('code')
-                    ->label('Código')
-                    ->searchable()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('phone')
-                    ->label('Teléfono')
-                    ->searchable(),
-
-                Tables\Columns\IconColumn::make('is_active')
-                    ->label('Activa')
-                    ->boolean(),
-
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Creada')
+                    ->label('Creado')
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
-            ])
-            ->filters([
-                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -103,9 +97,9 @@ class BranchResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBranches::route('/'),
-            'create' => Pages\CreateBranch::route('/create'),
-            'edit' => Pages\EditBranch::route('/{record}/edit'),
+            'index' => Pages\ListUsers::route('/'),
+            'create' => Pages\CreateUser::route('/create'),
+            'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 }

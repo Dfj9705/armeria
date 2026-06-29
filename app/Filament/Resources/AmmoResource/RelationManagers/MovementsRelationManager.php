@@ -32,6 +32,9 @@ class MovementsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('ammo')
             ->columns([
+                Tables\Columns\TextColumn::make('branch.name')
+                    ->label('Sucursal')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('moved_at')
                     ->label('Fecha/Hora')
                     ->dateTime()
@@ -81,6 +84,15 @@ class MovementsRelationManager extends RelationManager
                     ->toggleable(isToggledHiddenByDefault: true),
 
             ])
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = auth()->user();
+
+                if ($user->isSuperAdmin()) {
+                    return $query;
+                }
+
+                return $query->where('branch_id', $user->branch_id);
+            })
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
                     ->label('Tipo')
@@ -98,6 +110,7 @@ class MovementsRelationManager extends RelationManager
                         $data['type'] = 'IN';
                         $data['user_id'] = Auth::id();
                         $data['moved_at'] = $data['moved_at'] ?? now();
+                        $data['branch_id'] = auth()->user()->branch_id;
                         return $data;
                     })
                     ->form([
@@ -137,6 +150,7 @@ class MovementsRelationManager extends RelationManager
                         $data['type'] = 'OUT';
                         $data['user_id'] = Auth::id();
                         $data['moved_at'] = $data['moved_at'] ?? now();
+                        $data['branch_id'] = auth()->user()->branch_id;
                         return $data;
                     })
                     ->form([
@@ -161,18 +175,18 @@ class MovementsRelationManager extends RelationManager
                             ->columnSpanFull(),
                     ])
                     ->before(function (array $data) {
-                        // ✅ Validación de stock antes de crear egreso
-                        $ammo = $this->getOwnerRecord(); // Ammo
-                        $available = $ammo->stock_boxes;
+                        $ammo = $this->getOwnerRecord();
+
+                        $stock = $ammo->stockByBranch(auth()->user()->branch_id);
+                        $available = (int) $stock['boxes'];
 
                         if ((int) $data['boxes'] > $available) {
                             Notification::make()
                                 ->title('Stock insuficiente')
-                                ->body("Disponible: {$available} cajas.")
+                                ->body("Disponible: {$available} cajas en esta sucursal.")
                                 ->danger()
                                 ->send();
 
-                            // Detiene la acción
                             $this->halt();
                         }
                     }),
@@ -188,6 +202,7 @@ class MovementsRelationManager extends RelationManager
                         $data['rounds'] = $data['rounds'] ?? 0;
                         $data['user_id'] = Auth::id();
                         $data['moved_at'] = $data['moved_at'] ?? now();
+                        $data['branch_id'] = auth()->user()->branch_id;
                         return $data;
                     })
                     ->form([
@@ -213,13 +228,15 @@ class MovementsRelationManager extends RelationManager
                             ->columnSpanFull(),
                     ])
                     ->before(function (array $data) {
-                        $ammo = $this->getOwnerRecord(); // Ammo
-                        $availableRounds = (int) $ammo->stock_rounds;
+                        $ammo = $this->getOwnerRecord();
+
+                        $stock = $ammo->stockByBranch(auth()->user()->branch_id);
+                        $availableRounds = (int) $stock['rounds'];
 
                         if ((int) $data['rounds'] > $availableRounds) {
                             Notification::make()
                                 ->title('Stock insuficiente')
-                                ->body("Disponible: {$availableRounds} cartuchos.")
+                                ->body("Disponible: {$availableRounds} cartuchos en esta sucursal.")
                                 ->danger()
                                 ->send();
 
@@ -238,6 +255,7 @@ class MovementsRelationManager extends RelationManager
                         $data['rounds'] = $data['rounds'] ?? 0;
                         $data['user_id'] = Auth::id();
                         $data['moved_at'] = $data['moved_at'] ?? now();
+                        $data['branch_id'] = auth()->user()->branch_id;
                         return $data;
                     })
                     ->form([
@@ -280,6 +298,7 @@ class MovementsRelationManager extends RelationManager
                         $data['type'] = 'IN';
                         $data['user_id'] = Auth::id();
                         $data['moved_at'] = $data['moved_at'] ?? now();
+                        $data['branch_id'] = auth()->user()->branch_id;
                         return $data;
                     })
                     ->form([

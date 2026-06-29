@@ -11,7 +11,8 @@ class CreateSale extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // Si no vienen, forzamos 0.00
+        $data['branch_id'] = auth()->user()->branch_id;
+
         $data['subtotal'] = (float) ($data['subtotal'] ?? 0);
         $data['tax'] = (float) ($data['tax'] ?? 0);
         $data['total'] = (float) ($data['total'] ?? 0);

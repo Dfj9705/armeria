@@ -51,8 +51,8 @@ class Accessory extends Model
 
     public function getCurrentStockAttribute(): int
     {
-        $in = (int) $this->movements()->where('type', 'in')->sum('quantity');
-        $out = (int) $this->movements()->where('type', 'out')->sum('quantity');
+        $in = (int) $this->movements()->where('type', 'in')->where('branch_id', auth()->user()->branch_id)->sum('quantity');
+        $out = (int) $this->movements()->where('type', 'out')->where('branch_id', auth()->user()->branch_id)->sum('quantity');
 
         return $in - $out;
     }
@@ -78,6 +78,23 @@ class Accessory extends Model
             'brand_id'  // Local key on brand_models...
         );
     }
+    public function stockByBranch(?int $branchId): float
+    {
+        $query = $this->movements();
 
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        $in = (float) (clone $query)
+            ->where('type', 'in')
+            ->sum('quantity');
+
+        $out = (float) (clone $query)
+            ->where('type', 'out')
+            ->sum('quantity');
+
+        return $in - $out;
+    }
 
 }

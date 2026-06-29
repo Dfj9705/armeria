@@ -38,7 +38,7 @@ class Weapon extends Model
 
     public function getStockAttribute(): int
     {
-        return $this->units()->where('status', 'IN_STOCK')->count();
+        return $this->units()->where('status', 'IN_STOCK')->where('branch_id', auth()->user()->branch_id)->count();
     }
 
 

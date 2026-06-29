@@ -22,9 +22,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
+use App\Support\Concerns\HasBranchScope;
 
 class SaleResource extends Resource
 {
+    use HasBranchScope;
     protected static ?string $model = Sale::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
@@ -197,8 +199,8 @@ class SaleResource extends Resource
                                 ->label('Serie')
                                 ->options(
                                     fn() => WeaponUnit::query()
-                                        ->where('status', 'in_stock')
-                                        ->orWhere('status', 'reserved')
+                                        ->where('branch_id', auth()->user()->branch_id)
+                                        ->whereIn('status', ['IN_STOCK', 'RESERVED'])
                                         ->orderBy('serial_number')
                                         ->pluck('serial_number', 'id')
                                         ->mapWithKeys(function ($serial, $id) {
@@ -249,7 +251,22 @@ class SaleResource extends Resource
                             // ===== MUNICIÓN =====
                             Forms\Components\Select::make('ammo_id')
                                 ->label('Munición')
-                                ->options(fn() => Ammo::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                                ->options(function () {
+                                    $branchId = auth()->user()->branch_id;
+
+                                    return Ammo::query()
+                                        ->orderBy('name')
+                                        ->get()
+                                        ->filter(fn($ammo) => $ammo->stockByBranch($branchId)['boxes'] > 0 || $ammo->stockByBranch($branchId)['rounds'] > 0)
+                                        ->mapWithKeys(function ($ammo) use ($branchId) {
+                                            $stock = $ammo->stockByBranch($branchId);
+
+                                            return [
+                                                $ammo->id => "{$ammo->name} | Cajas: {$stock['boxes']} | Suelta: {$stock['rounds']}",
+                                            ];
+                                        })
+                                        ->toArray();
+                                })
                                 ->searchable()
                                 ->preload()
                                 ->live()
@@ -325,12 +342,62 @@ class SaleResource extends Resource
                                         $set('description_snapshot', $state . 'Cartuchos de Munición' . $ammo->brand->name . ' ' . $ammo->caliber->name . ' ' . $ammo->name);
                                     }
                                 })
+                                ->rules([
+                                    function (Get $get) {
+                                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                            if ($get('kind') !== 'ammo') {
+                                                return;
+                                            }
+
+                                            $ammoId = $get('ammo_id');
+
+                                            if (!$ammoId) {
+                                                return;
+                                            }
+
+                                            $ammo = Ammo::find($ammoId);
+
+                                            if (!$ammo) {
+                                                return;
+                                            }
+
+                                            $stock = $ammo->stockByBranch(auth()->user()->branch_id);
+
+                                            $available = $get('ammo_mode') === 'box'
+                                                ? (int) $stock['boxes']
+                                                : (int) $stock['rounds'];
+
+                                            $label = $get('ammo_mode') === 'box'
+                                                ? 'cajas'
+                                                : 'cartuchos';
+
+                                            if ((int) $value > $available) {
+                                                $fail("Stock insuficiente. Disponible en esta sucursal: {$available} {$label}.");
+                                            }
+                                        };
+                                    },
+                                ])
                                 ->columnSpan(2),
 
                             // ===== ACCESORIO =====
                             Forms\Components\Select::make('accessory_id')
                                 ->label('Accesorio')
-                                ->options(fn() => Accessory::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                                ->options(function () {
+                                    $branchId = auth()->user()->branch_id;
+
+                                    return Accessory::query()
+                                        ->orderBy('name')
+                                        ->get()
+                                        ->filter(fn($accessory) => $accessory->stockByBranch($branchId) > 0)
+                                        ->mapWithKeys(function ($accessory) use ($branchId) {
+                                            $stock = $accessory->stockByBranch($branchId);
+
+                                            return [
+                                                $accessory->id => "{$accessory->name} | Disponible: {$stock}",
+                                            ];
+                                        })
+                                        ->toArray();
+                                })
                                 ->searchable()
                                 ->preload()
                                 ->live()
@@ -363,6 +430,33 @@ class SaleResource extends Resource
 
                                     $set('description_snapshot', $accesory->name . " Marca: " . $accesory->brand->name);
                                 })
+                                ->rules([
+                                    function (Get $get) {
+                                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                            if ($get('kind') !== 'accessory') {
+                                                return;
+                                            }
+
+                                            $accessoryId = $get('accessory_id') ?: $get('sellable_id');
+
+                                            if (!$accessoryId) {
+                                                return;
+                                            }
+
+                                            $accessory = Accessory::find($accessoryId);
+
+                                            if (!$accessory) {
+                                                return;
+                                            }
+
+                                            $available = $accessory->stockByBranch(auth()->user()->branch_id);
+
+                                            if ((float) $value > (float) $available) {
+                                                $fail("Stock insuficiente. Disponible en esta sucursal: {$available}.");
+                                            }
+                                        };
+                                    },
+                                ])
                                 ->columnSpan(3),
 
                             Forms\Components\TextInput::make('discount')
@@ -440,6 +534,10 @@ class SaleResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('#')->sortable(),
                 Tables\Columns\TextColumn::make('customer.name')->label('Cliente')->searchable(),
+                Tables\Columns\TextColumn::make('branch.name')
+                    ->label('Sucursal')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('Estado')->sortable()->badge()->color(function ($state) {
                     switch ($state) {
                         case 'draft':
@@ -494,5 +592,12 @@ class SaleResource extends Resource
         return [
             'payments' => PaymentsRelationManager::class,
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return static::applyBranchScope(
+            parent::getEloquentQuery()
+        );
     }
 }
