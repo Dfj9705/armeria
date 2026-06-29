@@ -35,10 +35,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-class CustomerResource extends Resource
+class CustomerResource extends BaseResource
 {
     protected static ?string $model = Customer::class;
-
+    protected static string $permissionPrefix = 'customers';
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationGroup = 'Ventas';
     protected static ?string $modelLabel = 'Cliente';

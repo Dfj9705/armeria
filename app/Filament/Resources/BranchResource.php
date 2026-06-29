@@ -14,13 +14,18 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Support\Concerns\HasBranchScope;
 
-class BranchResource extends Resource
+class BranchResource extends BaseResource
 {
     use HasBranchScope;
 
     protected static ?string $model = Branch::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string $permissionPrefix = 'branches';
+    protected static ?string $navigationGroup = 'Administración';
+    protected static ?string $navigationLabel = 'Sucursales';
+    protected static ?string $modelLabel = 'Sucursal';
+    protected static ?string $pluralModelLabel = 'Sucursales';
+    protected static ?string $navigationIcon = 'heroicon-o-building-storefront';
+    protected static ?int $navigationSort = 5;
 
     public static function form(Form $form): Form
     {

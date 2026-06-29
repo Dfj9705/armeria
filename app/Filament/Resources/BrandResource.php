@@ -14,9 +14,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class BrandResource extends Resource
+class BrandResource extends BaseResource
 {
     protected static ?string $model = Brand::class;
+    protected static string $permissionPrefix = 'brands';
     protected static ?string $navigationGroup = 'Catálogos';
     protected static ?string $modelLabel = 'Marca';
     protected static ?string $pluralModelLabel = 'Marcas';

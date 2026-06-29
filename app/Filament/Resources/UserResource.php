@@ -14,11 +14,16 @@ use Hash;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class UserResource extends Resource
+class UserResource extends BaseResource
 {
     protected static ?string $model = User::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string $permissionPrefix = 'users';
+    protected static ?string $navigationGroup = 'Administración';
+    protected static ?string $navigationLabel = 'Usuarios';
+    protected static ?string $modelLabel = 'Usuario';
+    protected static ?string $pluralModelLabel = 'Usuarios';
+    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static ?int $navigationSort = 10;
 
     public static function form(Form $form): Form
     {
@@ -50,6 +55,13 @@ class UserResource extends Resource
                     ->searchable()
                     ->preload()
                     ->nullable(),
+
+                Forms\Components\Select::make('roles')
+                    ->label('Roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
             ]);
     }
 
@@ -71,7 +83,10 @@ class UserResource extends Resource
                     ->label('Sucursal')
                     ->searchable()
                     ->sortable(),
-
+                Tables\Columns\TextColumn::make('roles.name')
+                    ->label('Roles')
+                    ->badge()
+                    ->separator(', '),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime('d/m/Y H:i')

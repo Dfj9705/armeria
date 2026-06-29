@@ -25,9 +25,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class AccessoryResource extends Resource
+class AccessoryResource extends BaseResource
 {
     protected static ?string $model = Accessory::class;
+    protected static string $permissionPrefix = 'accessories';
 
     protected static ?string $navigationIcon = 'heroicon-o-wrench-screwdriver';
     protected static ?string $navigationGroup = 'Inventario';

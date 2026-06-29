@@ -34,10 +34,11 @@ use Filament\Tables\Table;
 use App\Models\Weapon;
 use Illuminate\Database\Eloquent\Builder;
 
-class WeaponResource extends Resource
+class WeaponResource extends BaseResource
 {
     protected static ?string $model = Weapon::class;
     protected static ?string $slug = 'armas';
+    protected static string $permissionPrefix = 'weapons';
     protected static ?string $navigationIcon = 'fas-gun';
     protected static ?string $navigationGroup = 'Inventario';
     protected static ?string $modelLabel = 'Arma';

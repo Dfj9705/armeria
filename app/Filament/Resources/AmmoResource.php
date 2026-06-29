@@ -27,10 +27,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class AmmoResource extends Resource
+class AmmoResource extends BaseResource
 {
     protected static ?string $model = Ammo::class;
-
+    protected static string $permissionPrefix = 'ammo';
     protected static ?string $navigationIcon = 'govicon-ammo';
 
     protected static ?string $navigationGroup = 'Inventario';

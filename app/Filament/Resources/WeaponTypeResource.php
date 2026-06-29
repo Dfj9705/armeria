@@ -13,10 +13,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class WeaponTypeResource extends Resource
+class WeaponTypeResource extends BaseResource
 {
     protected static ?string $model = WeaponType::class;
-
+    protected static string $permissionPrefix = 'weapon_types';
     protected static ?string $navigationGroup = 'Catálogos';
     protected static ?string $navigationLabel = 'Tipo de arma';
     protected static ?string $modelLabel = 'Tipo de arma';

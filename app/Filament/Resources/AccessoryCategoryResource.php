@@ -10,9 +10,10 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-class AccessoryCategoryResource extends Resource
+class AccessoryCategoryResource extends BaseResource
 {
     protected static ?string $model = AccessoryCategory::class;
+    protected static string $permissionPrefix = 'accessory_categories';
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
     protected static ?string $navigationGroup = 'Catálogos';

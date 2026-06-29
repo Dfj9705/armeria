@@ -14,9 +14,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class CaliberResource extends Resource
+class CaliberResource extends BaseResource
 {
     protected static ?string $model = Caliber::class;
+    protected static string $permissionPrefix = 'calibers';
     protected static ?string $navigationGroup = 'Catálogos';
     protected static ?string $modelLabel = 'Calibre';
     protected static ?string $pluralModelLabel = 'Calibres';

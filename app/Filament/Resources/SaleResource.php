@@ -24,11 +24,11 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use App\Support\Concerns\HasBranchScope;
 
-class SaleResource extends Resource
+class SaleResource extends BaseResource
 {
     use HasBranchScope;
     protected static ?string $model = Sale::class;
-
+    protected static string $permissionPrefix = 'sales';
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
     protected static ?string $navigationGroup = 'Ventas';
     protected static ?string $modelLabel = 'Venta';
