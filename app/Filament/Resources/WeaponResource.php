@@ -32,6 +32,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use App\Models\Weapon;
+use Illuminate\Database\Eloquent\Builder;
 
 class WeaponResource extends Resource
 {
@@ -251,4 +252,21 @@ class WeaponResource extends Resource
         ];
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if (!$user->branch_id) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereHas('units', function ($q) use ($user) {
+            $q->where('branch_id', $user->branch_id);
+        });
+    }
 }

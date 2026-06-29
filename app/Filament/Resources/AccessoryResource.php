@@ -276,4 +276,22 @@ class AccessoryResource extends Resource
             'edit' => Pages\EditAccessory::route('/{record}/edit'),
         ];
     }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if (!$user->branch_id) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereHas('movements', function ($q) use ($user) {
+            $q->where('branch_id', $user->branch_id);
+        });
+    }
 }

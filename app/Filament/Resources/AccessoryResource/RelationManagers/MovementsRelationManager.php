@@ -11,11 +11,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use App\Support\Concerns\HasBranchScope;
 
 class MovementsRelationManager extends RelationManager
 {
-    use HasBranchScope;
     protected static string $relationship = 'movements';
     protected static ?string $title = 'Movimientos';
     protected static ?string $recordTitleAttribute = 'id';
@@ -173,12 +171,5 @@ class MovementsRelationManager extends RelationManager
                 Tables\Actions\DeleteAction::make(),
             ])
             ->defaultSort('occurred_at', 'asc');
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return static::applyBranchScope(
-            parent::getEloquentQuery()
-        );
     }
 }
