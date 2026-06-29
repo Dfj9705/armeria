@@ -15,6 +15,7 @@ class WeaponUnit extends Model
         'purchase_cost',
         'notes',
         'possesion_number',
+        'branch_id',
     ];
 
     public function weapon()
@@ -27,4 +28,8 @@ class WeaponUnit extends Model
         return $this->hasMany(WeaponUnitMovement::class);
     }
 
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

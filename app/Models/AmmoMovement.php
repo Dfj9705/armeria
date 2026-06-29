@@ -19,6 +19,7 @@ class AmmoMovement extends Model
         'notes',
         'moved_at',
         'user_id',
+        'branch_id',
     ];
 
     protected $casts = [
@@ -35,5 +36,10 @@ class AmmoMovement extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

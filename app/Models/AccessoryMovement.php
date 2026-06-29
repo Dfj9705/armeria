@@ -20,6 +20,7 @@ class AccessoryMovement extends Model
         'reference',
         'notes',
         'user_id',
+        'branch_id',
     ];
 
     protected $casts = [
@@ -50,5 +51,10 @@ class AccessoryMovement extends Model
                 }
             }
         });
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

@@ -33,6 +33,7 @@ class Sale extends Model
         'fel_motivo_anulacion',
         'created_by',
         'updated_by',
+        'branch_id',
     ];
 
     protected $casts = [
@@ -78,4 +79,8 @@ class Sale extends Model
         return $this->pending_amount <= 0;
     }
 
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }
